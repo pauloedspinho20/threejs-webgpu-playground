@@ -5,6 +5,7 @@ import Swal from 'sweetalert2';
 import $ from 'jquery';
 
 import { CameraOperator } from '../core/CameraOperator';
+import { EngineOptions, ResolvedEngineOptions, resolveEngineOptions } from '../core/EngineOptions';
 import { pass } from 'three/tsl';
 import { fxaa } from 'three/addons/tsl/display/FXAANode.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
@@ -79,13 +80,17 @@ export class World
 	public paths: Path[] = [];
 	public scenarioGUIFolder: GUI.GUI;
 	public updatables: IUpdatable[] = [];
+	public options: ResolvedEngineOptions;
 
 	private lastScenarioID: string;
 
-	constructor(worldScenePath?: string)
+	constructor(options: EngineOptions = {})
 	{
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const scope = this;
+
+		this.options = resolveEngineOptions(options);
+		const opts = this.options;
 
 		// WebGPU not supported (WebGPURenderer still auto-falls back to WebGL2)
 		if (!WebGPU.isAvailable())
@@ -101,12 +106,12 @@ export class World
 		}
 
 		// Renderer
-		this.renderer = new THREE.WebGPURenderer({ antialias: false });
-		this.renderer.setPixelRatio(window.devicePixelRatio);
+		this.renderer = new THREE.WebGPURenderer({ antialias: opts.renderer.antialias });
+		this.renderer.setPixelRatio(opts.renderer.pixelRatio);
 		this.renderer.setSize(window.innerWidth, window.innerHeight);
-		this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-		this.renderer.toneMappingExposure = 1.0;
-		this.renderer.shadowMap.enabled = true;
+		this.renderer.toneMapping = opts.renderer.toneMapping;
+		this.renderer.toneMappingExposure = opts.renderer.toneMappingExposure;
+		this.renderer.shadowMap.enabled = opts.renderer.shadows;
 		this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 		this.generateHTML();
@@ -122,7 +127,7 @@ export class World
 
 		// Three.js scene
 		this.graphicsWorld = new THREE.Scene();
-		this.camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1010);
+		this.camera = new THREE.PerspectiveCamera(opts.camera.fov, window.innerWidth / window.innerHeight, opts.camera.near, opts.camera.far);
 
 		// Post-processing: FXAA as a TSL node pass
 		this.postProcessing = new THREE.PostProcessing(this.renderer);
@@ -131,15 +136,15 @@ export class World
 
 		// Physics
 		this.physicsWorld = new CANNON.World();
-		this.physicsWorld.gravity.set(0, -9.81, 0);
+		this.physicsWorld.gravity.set(opts.physics.gravity[0], opts.physics.gravity[1], opts.physics.gravity[2]);
 		this.physicsWorld.broadphase = new CANNON.SAPBroadphase(this.physicsWorld);
-		(this.physicsWorld.solver as CANNON.GSSolver).iterations = 10;
+		(this.physicsWorld.solver as CANNON.GSSolver).iterations = opts.physics.solverIterations;
 		this.physicsWorld.allowSleep = true;
 
 		this.parallelPairs = [];
-		this.physicsFrameRate = 60;
+		this.physicsFrameRate = opts.physics.frameRate;
 		this.physicsFrameTime = 1 / this.physicsFrameRate;
-		this.physicsMaxPrediction = this.physicsFrameRate;
+		this.physicsMaxPrediction = opts.physics.maxPrediction;
 
 		// RenderLoop
 		this.clock = new THREE.Clock();
@@ -158,15 +163,15 @@ export class World
 		this.cameraOperator = new CameraOperator(this, this.camera, this.params.Mouse_Sensitivity);
 		this.sky = new Sky(this);
 		
-		// Load scene if path is supplied
-		if (worldScenePath !== undefined)
+		// Load scene if a world is supplied
+		if (opts.world !== null)
 		{
 			const loadingManager = new LoadingManager(this);
 			loadingManager.onFinishedCallback = () =>
 			{
 				this.update(1, 1);
 				this.setTimeScale(1);
-	
+
 				Swal.fire({
 					title: 'Welcome to the playground!',
 					text: 'Feel free to explore the world and interact with available vehicles. There are also various scenarios ready to launch from the right panel.',
@@ -178,11 +183,18 @@ export class World
 					}
 				});
 			};
-			loadingManager.loadGLTF(worldScenePath, (gltf) =>
+
+			if (typeof opts.world === 'string')
+			{
+				loadingManager.loadGLTF(opts.world, (gltf) =>
 				{
 					this.loadScene(loadingManager, gltf);
-				}
-			);
+				});
+			}
+			else
+			{
+				this.loadScene(loadingManager, opts.world);
+			}
 		}
 		else
 		{
@@ -264,17 +276,21 @@ export class World
 
 	public isOutOfBounds(position: CANNON.Vec3): boolean
 	{
-		const inside = position.x > -211.882 && position.x < 211.882 &&
-					position.z > -169.098 && position.z < 153.232 &&
-					position.y > 0.107;
-		const belowSeaLevel = position.y < 14.989;
+		const bounds = this.options.bounds;
+		if (bounds === null) return false;
+
+		const inside = position.x > bounds.min.x && position.x < bounds.max.x &&
+					position.z > bounds.min.z && position.z < bounds.max.z &&
+					position.y > bounds.min.y;
+		const belowSeaLevel = position.y < bounds.seaLevel;
 
 		return !inside && belowSeaLevel;
 	}
 
 	public outOfBoundsRespawn(body: CANNON.Body, position?: CANNON.Vec3): void
 	{
-		const newPos = position || new CANNON.Vec3(0, 16, 0);
+		const r = this.options.respawn.position;
+		const newPos = position || new CANNON.Vec3(r.x, r.y, r.z);
 		const newQuat = new CANNON.Quaternion(0, 0, 0, 1);
 
 		body.position.copy(newPos);
@@ -326,6 +342,12 @@ export class World
 
 		// Measuring render time
 		this.renderDelta = this.clock.getDelta();
+	}
+
+	/** Resolve a named sub-asset (e.g. 'boxman.glb') against the configured asset base URL. */
+	public resolveAsset(name: string): string
+	{
+		return this.options.assetBaseUrl + name;
 	}
 
 	public setTimeScale(value: number): void
@@ -555,7 +577,7 @@ export class World
 		`).appendTo('body');
 
 		// Canvas
-		document.body.appendChild(this.renderer.domElement);
+		this.options.container.appendChild(this.renderer.domElement);
 		this.renderer.domElement.id = 'canvas';
 	}
 
@@ -564,9 +586,9 @@ export class World
 		this.params = {
 			Pointer_Lock: true,
 			Mouse_Sensitivity: 0.3,
-			Time_Scale: 1,
-			Shadows: true,
-			FXAA: true,
+			Time_Scale: this.options.timeScale,
+			Shadows: this.options.renderer.shadows,
+			FXAA: this.options.postFX.fxaa,
 			Debug_Physics: false,
 			Debug_FPS: false,
 			Sun_Elevation: 50,
