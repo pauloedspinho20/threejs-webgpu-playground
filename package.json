@@ -1,7 +1,8 @@
 {
   "name": "sketchbook",
   "version": "0.4.0",
-  "description": "3D playground built on three.js and cannon.js",
+  "description": "3D playground built on three.js WebGPU (TSL) and cannon-es",
+  "private": true,
   "keywords": [
     "3d",
     "threejs",
@@ -9,13 +10,17 @@
     "game",
     "engine",
     "typescript",
-    "sketchbook"
+    "sketchbook",
+    "webgpu"
   ],
-  "main": "build/sketchbook.min.js",
-  "types": "build/types/sketchbook.d.ts",
+  "type": "module",
   "scripts": {
-    "dev": "webpack-dev-server --config webpack.dev.js",
-    "build": "webpack --config webpack.prod.js"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "repository": {
     "type": "git",
@@ -28,22 +33,22 @@
   },
   "homepage": "https://github.com/swift502/Sketchbook",
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@types/jquery": "^3.5.5",
     "@types/lodash": "^4.14.168",
-    "css-loader": "^3.6.0",
-    "style-loader": "^1.3.0",
-    "ts-loader": "^6.2.2",
-    "typescript": "^3.9.9",
-    "webpack": "^4.46.0",
-    "webpack-cli": "^3.3.12",
-    "webpack-dev-server": "^3.11.2",
-    "webpack-merge": "^4.2.2"
+    "@types/three": "^0.185.0",
+    "eslint": "^9.39.4",
+    "typescript": "^5.5.0",
+    "typescript-eslint": "^8.63.0",
+    "vite": "^6.0.0"
   },
   "dependencies": {
+    "cannon-es": "^0.20.0",
+    "dat.gui": "^0.7.9",
     "jquery": "^3.6.0",
     "lodash": "^4.17.21",
     "sweetalert2": "^9.17.2",
-    "three": "0.113.0",
-    "three-csm": "1.0.2"
+    "three": "^0.185.1",
+    "three-to-cannon": "^5.0.2"
   }
 }

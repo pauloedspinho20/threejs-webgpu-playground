@@ -3,14 +3,16 @@
         "src/ts/**/*"
     ],
     "compilerOptions": {
-        "module": "commonjs",
-        "target": "es5",
-        "moduleResolution": "node",
-        "declaration": true,
-        "declarationDir": "build/types",
-        "baseUrl": ".",
-        "paths": {
-            "cannon" : ["src/lib/cannon/cannon"]
-        }
+        "module": "ESNext",
+        "target": "ES2022",
+        "moduleResolution": "bundler",
+        "lib": ["ES2022", "DOM", "DOM.Iterable"],
+        "allowJs": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "resolveJsonModule": true,
+        "noEmit": true,
+        "baseUrl": "."
     }
 }

@@ -1,17 +1,15 @@
 import * as THREE from 'three';
-import * as CANNON from 'cannon';
+import * as CANNON from 'cannon-es';
 import Swal from 'sweetalert2';
-import * as $ from 'jquery';
+import $ from 'jquery';
 
 import { CameraOperator } from '../core/CameraOperator';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
-import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
-import { FXAAShader  } from 'three/examples/jsm/shaders/FXAAShader';
+import { pass } from 'three/tsl';
+import { fxaa } from 'three/addons/tsl/display/FXAANode.js';
+import WebGPU from 'three/addons/capabilities/WebGPU.js';
 
-import { Detector } from '../../lib/utils/Detector';
 import { Stats } from '../../lib/utils/Stats';
-import * as GUI from '../../lib/utils/dat.gui';
+import * as GUI from 'dat.gui';
 import { CannonDebugRenderer } from '../../lib/cannon/CannonDebugRenderer';
 import * as _ from 'lodash';
 
@@ -34,9 +32,9 @@ import { Ocean } from './Ocean';
 
 export class World
 {
-	public renderer: THREE.WebGLRenderer;
+	public renderer: THREE.WebGPURenderer;
 	public camera: THREE.PerspectiveCamera;
-	public composer: any;
+	public postProcessing: any;
 	public stats: Stats;
 	public graphicsWorld: THREE.Scene;
 	public sky: Sky;
@@ -70,21 +68,21 @@ export class World
 	{
 		const scope = this;
 
-		// WebGL not supported
-		if (!Detector.webgl)
+		// WebGPU not supported (WebGPURenderer still auto-falls back to WebGL2)
+		if (!WebGPU.isAvailable())
 		{
 			Swal.fire({
 				icon: 'warning',
-				title: 'WebGL compatibility',
-				text: 'This browser doesn\'t seem to have the required WebGL capabilities. The application may not work correctly.',
-				footer: '<a href="https://get.webgl.org/" target="_blank">Click here for more information</a>',
+				title: 'WebGPU compatibility',
+				text: 'This browser doesn\'t support WebGPU. The application will fall back to WebGL2, which may perform differently.',
+				footer: '<a href="https://caniuse.com/webgpu" target="_blank">Click here for more information</a>',
 				showConfirmButton: false,
 				buttonsStyling: false
 			});
 		}
 
 		// Renderer
-		this.renderer = new THREE.WebGLRenderer();
+		this.renderer = new THREE.WebGPURenderer({ antialias: false });
 		this.renderer.setPixelRatio(window.devicePixelRatio);
 		this.renderer.setSize(window.innerWidth, window.innerHeight);
 		this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -100,8 +98,6 @@ export class World
 			scope.camera.aspect = window.innerWidth / window.innerHeight;
 			scope.camera.updateProjectionMatrix();
 			scope.renderer.setSize(window.innerWidth, window.innerHeight);
-			fxaaPass.uniforms['resolution'].value.set(1 / (window.innerWidth * pixelRatio), 1 / (window.innerHeight * pixelRatio));
-			scope.composer.setSize(window.innerWidth * pixelRatio, window.innerHeight * pixelRatio);
 		}
 		window.addEventListener('resize', onWindowResize, false);
 
@@ -109,25 +105,16 @@ export class World
 		this.graphicsWorld = new THREE.Scene();
 		this.camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1010);
 
-		// Passes
-		let renderPass = new RenderPass( this.graphicsWorld, this.camera );
-		let fxaaPass = new ShaderPass( FXAAShader );
-
-		// FXAA
-		let pixelRatio = this.renderer.getPixelRatio();
-		fxaaPass.material['uniforms'].resolution.value.x = 1 / ( window.innerWidth * pixelRatio );
-		fxaaPass.material['uniforms'].resolution.value.y = 1 / ( window.innerHeight * pixelRatio );
-
-		// Composer
-		this.composer = new EffectComposer( this.renderer );
-		this.composer.addPass( renderPass );
-		this.composer.addPass( fxaaPass );
+		// Post-processing: FXAA as a TSL node pass
+		this.postProcessing = new THREE.PostProcessing(this.renderer);
+		const scenePass = pass(this.graphicsWorld, this.camera);
+		this.postProcessing.outputNode = fxaa(scenePass);
 
 		// Physics
 		this.physicsWorld = new CANNON.World();
 		this.physicsWorld.gravity.set(0, -9.81, 0);
 		this.physicsWorld.broadphase = new CANNON.SAPBroadphase(this.physicsWorld);
-		this.physicsWorld.solver.iterations = 10;
+		(this.physicsWorld.solver as CANNON.GSSolver).iterations = 10;
 		this.physicsWorld.allowSleep = true;
 
 		this.parallelPairs = [];
@@ -190,7 +177,11 @@ export class World
 			});
 		}
 
-		this.render(this);
+		// WebGPURenderer needs async initialization before the first render.
+		this.renderer.init().then(() =>
+		{
+			this.render(this);
+		});
 	}
 
 	// Update
@@ -293,7 +284,7 @@ export class World
 		this.stats.begin();
 
 		// Actual rendering with a FXAA ON/OFF switch
-		if (this.params.FXAA) this.composer.render();
+		if (this.params.FXAA) this.postProcessing.render();
 		else this.renderer.render(this.graphicsWorld, this.camera);
 
 		// Measuring render time
@@ -337,7 +328,6 @@ export class World
 				if (child.type === 'Mesh')
 				{
 					Utils.setupMeshProperties(child);
-					this.sky.csm.setupMaterial(child.material);
 
 					if (child.material.name === 'ocean')
 					{
@@ -357,7 +347,7 @@ export class World
 								let phys = new BoxCollider({size: new THREE.Vector3(child.scale.x, child.scale.y, child.scale.z)});
 								phys.body.position.copy(Utils.cannonVector(child.position));
 								phys.body.quaternion.copy(Utils.cannonQuat(child.quaternion));
-								phys.body.computeAABB();
+								phys.body.updateAABB();
 
 								phys.body.shapes.forEach((shape) => {
 									shape.collisionFilterMask = ~CollisionGroups.TrimeshColliders;
@@ -569,18 +559,7 @@ export class World
 		settingsFolder.add(this.params, 'Shadows')
 			.onChange((enabled) =>
 			{
-				if (enabled)
-				{
-					this.sky.csm.lights.forEach((light) => {
-						light.castShadow = true;
-					});
-				}
-				else
-				{
-					this.sky.csm.lights.forEach((light) => {
-						light.castShadow = false;
-					});
-				}
+				this.sky.sunLight.castShadow = enabled;
 			});
 		settingsFolder.add(this.params, 'Pointer_Lock')
 			.onChange((enabled) =>

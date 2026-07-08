@@ -38,56 +38,30 @@ Mostly a playground for exploring how conventional third person gameplay mechani
 
 All planned features can be found in the [GitHub Projects](https://github.com/swift502/Sketchbook/projects).
 
+> **This fork** has been migrated from WebGL to **three.js WebGPU (`WebGPURenderer`)** with shaders rewritten in **TSL** (Three.js Shading Language). It runs on the WebGPU backend where available and automatically falls back to WebGL2 otherwise. The toolchain is **Vite + TypeScript**, physics uses **cannon-es**, and three.js is on r185+.
+
 ## Usage
 
-You can define your own scenes in Blender, and then read them with Sketchbook. Sketchbook needs to run on a local server such as [http-server](https://www.npmjs.com/package/http-server) or [webpack-dev-server](https://github.com/webpack/webpack-dev-server) to be able to load external assets.
-
-<!-- #### Script tag -->
-
-1. Import:
-
-```html
-<script src="sketchbook.min.js"></script>
-```
-
-2. Load a glb scene defined in Blender:
+Scenes are authored in Blender and loaded as `.glb`. The app is bootstrapped in [`src/ts/main.ts`](src/ts/main.ts):
 
 ```javascript
-const world = new Sketchbook.World('scene.glb');
+import { World } from './world/World';
+new World('/assets/world.glb');
 ```
 
-<!--
+## Running locally
 
-#### NPM
-
-1. Install:
-
-```
-npm i sketchbook
-```
-
-2. Import:
-
-```javascript
-import { World } from 'sketchbook';
-```
-
-3. Load a glb scene defined in Blender:
-
-```javascript
-const world = new World('scene.glb');
-```
-
--->
+1. Install a current [Node.js](https://nodejs.org/en/) LTS (18+)
+2. Run `npm install`
+3. Run `npm run dev` and open http://localhost:8080
+4. Build for production with `npm run build` (output in `dist/`); preview it with `npm run preview`
 
 ## Contributing
 
-1. Get the LTS version of [Node.js](https://nodejs.org/en/) 16
-2. [Fork this repository](https://help.github.com/en/github/getting-started-with-github/fork-a-repo)
-3. Run `npm install`
-4. Run `npm run dev`
-5. Make changes and test them out at http://localhost:8080
-6. Commit and [make a pull request](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request-from-a-fork)!
+1. [Fork this repository](https://help.github.com/en/github/getting-started-with-github/fork-a-repo)
+2. Run `npm install`, then `npm run dev`
+3. Make changes and test them out at http://localhost:8080
+4. Commit and [make a pull request](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request-from-a-fork)!
 
 ## Credits
 

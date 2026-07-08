@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import * as CANNON from 'cannon';
+import * as CANNON from 'cannon-es';
 import * as _ from 'lodash';
 import * as Utils from '../core/FunctionLibrary';
 
@@ -255,7 +255,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		}
 		else
 		{
-			this.world.physicsWorld.remove(this.characterCapsule.body);
+			this.world.physicsWorld.removeBody(this.characterCapsule.body);
 		}
 	}
 
@@ -952,11 +952,6 @@ export class Character extends THREE.Object3D implements IWorldEntity
 			world.graphicsWorld.add(this);
 			world.graphicsWorld.add(this.raycastBox);
 
-			// Shadow cascades
-			this.materials.forEach((mat) =>
-			{
-				world.sky.csm.setupMaterial(mat);
-			});
 		}
 	}
 
@@ -979,7 +974,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 			_.pull(world.characters, this);
 
 			// Remove physics
-			world.physicsWorld.remove(this.characterCapsule.body);
+			world.physicsWorld.removeBody(this.characterCapsule.body);
 
 			// Remove visuals
 			world.graphicsWorld.remove(this);

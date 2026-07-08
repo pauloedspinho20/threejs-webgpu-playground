@@ -1,16 +1,16 @@
-import { SkyShader } from '../../lib/shaders/SkyShader';
 import * as THREE from 'three';
+import { SkyMesh } from 'three/addons/objects/SkyMesh.js';
+import { CSMShadowNode } from 'three/addons/csm/CSMShadowNode.js';
 import { World } from './World';
-import { EntityType } from '../enums/EntityType';
 import { IUpdatable } from '../interfaces/IUpdatable';
-import { default as CSM } from 'three-csm';
 
 export class Sky extends THREE.Object3D implements IUpdatable
 {
 	public updateOrder: number = 5;
 
 	public sunPosition: THREE.Vector3 = new THREE.Vector3();
-	public csm: CSM;
+	public sunLight: THREE.DirectionalLight;
+	public csm: CSMShadowNode;
 
 	set theta(value: number) {
 		this._theta = value;
@@ -27,11 +27,12 @@ export class Sky extends THREE.Object3D implements IUpdatable
 	private _theta: number = 145;
 
 	private hemiLight: THREE.HemisphereLight;
-	private maxHemiIntensity: number = 0.9;
-	private minHemiIntensity: number = 0.3;
+	// Intensities are ~PI x the original values to compensate for three.js r155+
+	// physically-based lighting (legacy 0.9 / 0.3).
+	private maxHemiIntensity: number = 2.83;
+	private minHemiIntensity: number = 0.94;
 
-	private skyMesh: THREE.Mesh;
-	private skyMaterial: THREE.ShaderMaterial;
+	private skyMesh: SkyMesh;
 
 	private world: World;
 
@@ -40,20 +41,15 @@ export class Sky extends THREE.Object3D implements IUpdatable
 		super();
 
 		this.world = world;
-		
-		// Sky material
-		this.skyMaterial = new THREE.ShaderMaterial({
-			uniforms: THREE.UniformsUtils.clone(SkyShader.uniforms),
-			fragmentShader: SkyShader.fragmentShader,
-			vertexShader: SkyShader.vertexShader,
-			side: THREE.BackSide
-		});
 
-		// Mesh
-		this.skyMesh = new THREE.Mesh(
-			new THREE.SphereBufferGeometry(1000, 24, 12),
-			this.skyMaterial
-		);
+		// Sky dome — three.js SkyMesh is the TSL-native Preetham model.
+		// Uniform values match the original SkyShader (same lineage).
+		this.skyMesh = new SkyMesh();
+		this.skyMesh.scale.setScalar(1000);
+		this.skyMesh.turbidity.value = 2;
+		this.skyMesh.rayleigh.value = 1;
+		this.skyMesh.mieCoefficient.value = 0.005;
+		this.skyMesh.mieDirectionalG.value = 0.8;
 		this.attach(this.skyMesh);
 
 		// Ambient light
@@ -64,44 +60,37 @@ export class Sky extends THREE.Object3D implements IUpdatable
 		this.hemiLight.position.set( 0, 50, 0 );
 		this.world.graphicsWorld.add( this.hemiLight );
 
-		// CSM
-		// New version
-		// let splitsCallback = (amount, near, far, target) =>
-		// {
-		// 	for (let i = amount - 1; i >= 0; i--)
-		// 	{
-		// 		target.push(Math.pow(1 / 3, i));
-		// 	}
-		// };
+		// Sun (directional light). Its direction (position -> target) drives CSM.
+		this.sunLight = new THREE.DirectionalLight( 0xffffff, 3.0 );
+		this.sunLight.castShadow = true;
+		this.sunLight.shadow.mapSize.setScalar( 2048 );
+		this.sunLight.shadow.camera.near = 0.5;
+		this.sunLight.shadow.camera.far = 250;
+		this.world.graphicsWorld.add( this.sunLight );
+		this.world.graphicsWorld.add( this.sunLight.target );
 
-		// Legacy
-		let splitsCallback = (amount, near, far) =>
+		// CSMShadowNode drives cascaded shadows for the sun light.
+		// customSplitsCallback pushes normalized cascade breaks into `target`,
+		// preserving the original 1/4^i split distribution.
+		let splitsCallback = (amount: number, near: number, far: number, target: number[]) =>
 		{
-			let arr = [];
-
 			for (let i = amount - 1; i >= 0; i--)
 			{
-				arr.push(Math.pow(1 / 4, i));
+				target.push(Math.pow(1 / 4, i));
 			}
-
-			return arr;
 		};
 
-		this.csm = new CSM({
-			fov: 80,
-			far: 250,	// maxFar
-			lightIntensity: 2.5,
+		this.csm = new CSMShadowNode(this.sunLight, {
+			maxFar: 250,
 			cascades: 3,
-			shadowMapSize: 2048,
-			camera: world.camera,
-			parent: world.graphicsWorld,
 			mode: 'custom',
 			customSplitsCallback: splitsCallback
 		});
 		this.csm.fade = true;
+		this.sunLight.shadow.shadowNode = this.csm;
 
 		this.refreshSunPosition();
-		
+
 		world.graphicsWorld.add(this);
 		world.registerUpdatable(this);
 	}
@@ -110,9 +99,6 @@ export class Sky extends THREE.Object3D implements IUpdatable
 	{
 		this.position.copy(this.world.camera.position);
 		this.refreshSunPosition();
-
-		this.csm.update(this.world.camera.matrix);
-		this.csm.lightDirection = new THREE.Vector3(-this.sunPosition.x, -this.sunPosition.y, -this.sunPosition.z).normalize();
 	}
 
 	public refreshSunPosition(): void
@@ -123,8 +109,12 @@ export class Sky extends THREE.Object3D implements IUpdatable
 		this.sunPosition.y = sunDistance * Math.sin(this._phi * Math.PI / 180);
 		this.sunPosition.z = sunDistance * Math.cos(this._theta * Math.PI / 180) * Math.cos(this._phi * Math.PI / 180);
 
-		this.skyMaterial.uniforms.sunPosition.value.copy(this.sunPosition);
-		this.skyMaterial.uniforms.cameraPos.value.copy(this.world.camera.position);
+		this.skyMesh.sunPosition.value.copy(this.sunPosition);
+
+		// DirectionalLight shines from position toward target(origin), so the
+		// light direction equals -sunPosition.
+		this.sunLight.position.copy(this.sunPosition);
+		this.sunLight.target.position.set(0, 0, 0);
 	}
 
 	public refreshHemiIntensity(): void

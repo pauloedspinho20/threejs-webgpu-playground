@@ -1,9 +1,9 @@
-import * as CANNON from 'cannon';
+import * as CANNON from 'cannon-es';
 import * as THREE from 'three';
 import * as Utils from '../../core/FunctionLibrary';
 import {ICollider} from '../../interfaces/ICollider';
 import {Object3D} from 'three';
-import { threeToCannon } from '../../../lib/utils/three-to-cannon';
+import { threeToCannon, ShapeType } from 'three-to-cannon';
 
 export class TrimeshCollider implements ICollider
 {
@@ -29,7 +29,8 @@ export class TrimeshCollider implements ICollider
 		mat.friction = options.friction;
 		// mat.restitution = 0.7;
 
-		let shape = threeToCannon(this.mesh, {type: threeToCannon.Type.MESH});
+		let result = threeToCannon(this.mesh, {type: ShapeType.MESH});
+		let shape = result.shape as unknown as CANNON.Shape;
 		// shape['material'] = mat;
 
 		// Add phys sphere
