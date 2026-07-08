@@ -3,7 +3,7 @@ import { SimulatorBase } from './SimulatorBase';
 import { SimulationFrame } from './SimulationFrame';
 import { spring } from '../../core/FunctionLibrary';
 
-export class RelativeSpringSimulator extends SimulatorBase
+export class RelativeSpringSimulator extends SimulatorBase<SimulationFrame>
 {
 	public position: number;
 	public velocity: number;
@@ -47,7 +47,7 @@ export class RelativeSpringSimulator extends SimulatorBase
 
 		// SpringR lerping
 		// Lerp from 0 to next frame
-		let lerp = THREE.MathUtils.lerp(0, this.cache[1].position, this.offset / this.frameTime);
+		const lerp = THREE.MathUtils.lerp(0, this.cache[1].position, this.offset / this.frameTime);
 
 		// Substract last lerp from current to make output relative
 		this.position = (lerp - this.lastLerp);
@@ -61,7 +61,7 @@ export class RelativeSpringSimulator extends SimulatorBase
 	 */
 	public getFrame(isLastFrame: boolean): SimulationFrame
 	{
-		let newFrame = Object.assign({}, this.lastFrame());
+		const newFrame = Object.assign({}, this.lastFrame());
 
 		if (isLastFrame)
 		{

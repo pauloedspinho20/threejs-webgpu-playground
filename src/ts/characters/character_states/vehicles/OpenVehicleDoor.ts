@@ -88,7 +88,7 @@ export class OpenVehicleDoor extends CharacterStateBase
 		{
 			this.factorSimluator.simulate(timeStep);
 
-			let lerpPosition = new THREE.Vector3().lerpVectors(this.startPosition, this.endPosition, this.factorSimluator.position);
+			const lerpPosition = new THREE.Vector3().lerpVectors(this.startPosition, this.endPosition, this.factorSimluator.position);
 			this.character.setPosition(lerpPosition.x, lerpPosition.y, lerpPosition.z);
 	
 			THREE.Quaternion.slerp(this.startRotation, this.endRotation, this.character.quaternion, this.factorSimluator.position);

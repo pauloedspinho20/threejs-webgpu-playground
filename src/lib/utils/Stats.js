@@ -1,4 +1,5 @@
-/* eslint-disable no-var*/
+/* eslint-disable */
+ 
 
 /**
  * @author mrdoob / http://mrdoob.com/

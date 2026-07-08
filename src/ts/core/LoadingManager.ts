@@ -24,9 +24,9 @@ export class LoadingManager
 		UIManager.setLoadingScreenVisible(true);
 	}
 
-	public loadGLTF(path: string, onLoadingFinished: (gltf: any) => void): void
+	public loadGLTF(path: string, onLoadingFinished: (gltf: unknown) => void): void
 	{
-		let trackerEntry = this.addLoadingEntry(path);
+		const trackerEntry = this.addLoadingEntry(path);
 
 		this.gltfLoader.load(path,
 		(gltf)  =>
@@ -49,7 +49,7 @@ export class LoadingManager
 
 	public addLoadingEntry(path: string): LoadingTrackerEntry
 	{
-		let entry = new LoadingTrackerEntry(path);
+		const entry = new LoadingTrackerEntry(path);
 		this.loadingTracker.push(entry);
 
 		return entry;
@@ -99,7 +99,7 @@ export class LoadingManager
 
 	private getLoadingPercentage(): number
 	{
-		let done = true;
+		let _done = true;
 		let total = 0;
 		let finished = 0;
 
@@ -107,7 +107,8 @@ export class LoadingManager
 		{
 			total++;
 			finished += item.progress;
-			if (!item.finished) done = false;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			if (!item.finished) _done = false;
 		}
 
 		return (finished / total) * 100;

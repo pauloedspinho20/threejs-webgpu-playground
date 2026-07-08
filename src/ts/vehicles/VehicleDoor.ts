@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import * as CANNON from 'cannon-es';
 import { Vehicle } from './Vehicle';
 import * as Utils from '../core/FunctionLibrary';
 import { VehicleSeat } from './VehicleSeat';
@@ -79,8 +78,8 @@ export class VehicleDoor
 			this.doorObject.getWorldPosition(this.doorWorldPos);
 
 			// Get acceleration
-			let vehicleVel = Utils.threeVector(this.vehicle.rayCastVehicle.chassisBody.velocity);
-			let vehicleVelDiff = vehicleVel.clone().sub(this.lastVehicleVel);
+			const vehicleVel = Utils.threeVector(this.vehicle.rayCastVehicle.chassisBody.velocity);
+			const vehicleVelDiff = vehicleVel.clone().sub(this.lastVehicleVel);
 
 			// Get vectors
 			const quat = Utils.threeQuat(this.vehicle.rayCastVehicle.chassisBody.quaternion);
@@ -88,17 +87,17 @@ export class VehicleDoor
 			const up = new THREE.Vector3(0, 1, 0).applyQuaternion(quat);
 
 			// Get imaginary positions
-			let trailerPos = back.clone().applyAxisAngle(up, this.sideMultiplier * this.rotation).add(this.doorWorldPos);
-			let trailerPushedPos = trailerPos.clone().sub(vehicleVelDiff);
+			const trailerPos = back.clone().applyAxisAngle(up, this.sideMultiplier * this.rotation).add(this.doorWorldPos);
+			const trailerPushedPos = trailerPos.clone().sub(vehicleVelDiff);
 
 			// Update last values
 			this.lastVehicleVel.copy(vehicleVel);
 			this.lastTrailerPos.copy(trailerPos);
 
 			// Measure angle difference
-			let v1 = trailerPos.clone().sub(this.doorWorldPos).normalize();
-			let v2 = trailerPushedPos.clone().sub(this.doorWorldPos).normalize();
-			let angle = Utils.getSignedAngleBetweenVectors(v1, v2, up);
+			const v1 = trailerPos.clone().sub(this.doorWorldPos).normalize();
+			const v2 = trailerPushedPos.clone().sub(this.doorWorldPos).normalize();
+			const angle = Utils.getSignedAngleBetweenVectors(v1, v2, up);
 
 			// Apply door velocity
 			this.doorVelocity += this.sideMultiplier * angle * 0.05;

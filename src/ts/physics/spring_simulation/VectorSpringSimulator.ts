@@ -3,7 +3,7 @@ import { SimulatorBase } from './SimulatorBase';
 import { SimulationFrameVector } from './SimulationFrameVector';
 import { springV } from '../../core/FunctionLibrary';
 
-export class VectorSpringSimulator extends SimulatorBase
+export class VectorSpringSimulator extends SimulatorBase<SimulationFrameVector>
 {
 	public position: THREE.Vector3;
 	public velocity: THREE.Vector3;
@@ -51,10 +51,11 @@ export class VectorSpringSimulator extends SimulatorBase
 	/**
 	 * Gets another simulation frame
 	 */
-	public getFrame(isLastFrame: boolean): SimulationFrameVector
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	public getFrame(_isLastFrame: boolean): SimulationFrameVector
 	{
 		// Deep clone data from previous frame
-		let newSpring = new SimulationFrameVector(this.lastFrame().position.clone(), this.lastFrame().velocity.clone());
+		const newSpring = new SimulationFrameVector(this.lastFrame().position.clone(), this.lastFrame().velocity.clone());
 		
 		// Calculate new Spring
 		springV(newSpring.position, this.target, newSpring.velocity, this.mass, this.damping);

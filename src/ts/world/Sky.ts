@@ -72,7 +72,7 @@ export class Sky extends THREE.Object3D implements IUpdatable
 		// CSMShadowNode drives cascaded shadows for the sun light.
 		// customSplitsCallback pushes normalized cascade breaks into `target`,
 		// preserving the original 1/4^i split distribution.
-		let splitsCallback = (amount: number, near: number, far: number, target: number[]) =>
+		const splitsCallback = (amount: number, near: number, far: number, target: number[]) =>
 		{
 			for (let i = amount - 1; i >= 0; i--)
 			{
@@ -95,7 +95,8 @@ export class Sky extends THREE.Object3D implements IUpdatable
 		world.registerUpdatable(this);
 	}
 
-	public update(timeScale: number): void
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	public update(_timeScale: number): void
 	{
 		this.position.copy(this.world.camera.position);
 		this.refreshSunPosition();

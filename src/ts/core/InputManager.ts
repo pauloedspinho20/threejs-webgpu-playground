@@ -1,6 +1,5 @@
 import { World } from '../world/World';
 import { IInputReceiver } from '../interfaces/IInputReceiver';
-import { EntityType } from '../enums/EntityType';
 import { IUpdatable } from '../interfaces/IUpdatable';
 
 export class InputManager implements IUpdatable
@@ -8,19 +7,19 @@ export class InputManager implements IUpdatable
 	public updateOrder: number = 3;
 
 	public world: World;
-	public domElement: any;
-	public pointerLock: any;
+	public domElement: unknown;
+	public pointerLock: unknown;
 	public isLocked: boolean;
 	public inputReceiver: IInputReceiver;
 
-	public boundOnMouseDown: (evt: any) => void;
-	public boundOnMouseMove: (evt: any) => void;
-	public boundOnMouseUp: (evt: any) => void;
-	public boundOnMouseWheelMove: (evt: any) => void;
-	public boundOnPointerlockChange: (evt: any) => void;
-	public boundOnPointerlockError: (evt: any) => void;
-	public boundOnKeyDown: (evt: any) => void;
-	public boundOnKeyUp: (evt: any) => void;
+	public boundOnMouseDown: (evt: Event | MouseEvent | KeyboardEvent) => void;
+	public boundOnMouseMove: (evt: Event | MouseEvent | KeyboardEvent) => void;
+	public boundOnMouseUp: (evt: Event | MouseEvent | KeyboardEvent) => void;
+	public boundOnMouseWheelMove: (evt: Event | MouseEvent | KeyboardEvent) => void;
+	public boundOnPointerlockChange: (evt: Event | MouseEvent | KeyboardEvent) => void;
+	public boundOnPointerlockError: (evt: Event | MouseEvent | KeyboardEvent) => void;
+	public boundOnKeyDown: (evt: Event | MouseEvent | KeyboardEvent) => void;
+	public boundOnKeyUp: (evt: Event | MouseEvent | KeyboardEvent) => void;
 	
 	constructor(world: World, domElement: HTMLElement)
 	{
@@ -79,6 +78,7 @@ export class InputManager implements IUpdatable
 		this.pointerLock = enabled;
 	}
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	public onPointerlockChange(event: MouseEvent): void
 	{
 		if (document.pointerLockElement === this.domElement)
@@ -95,6 +95,7 @@ export class InputManager implements IUpdatable
 		}
 	}
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	public onPointerlockError(event: MouseEvent): void
 	{
 		console.error('PointerLockControls: Unable to use Pointer Lock API');

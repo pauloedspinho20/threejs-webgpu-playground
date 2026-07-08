@@ -1,10 +1,10 @@
-export abstract class SimulatorBase
+export abstract class SimulatorBase<TFrame>
 {
-	public mass: any;
-	public damping: any;
+	public mass: number;
+	public damping: number;
 	public frameTime: number;
 	public offset: number;
-	public abstract cache: any[];
+	public abstract cache: TFrame[];
 	
 	constructor(fps: number, mass: number, damping: number)
 	{
@@ -19,7 +19,7 @@ export abstract class SimulatorBase
 		this.frameTime = 1 / value;
 	}
 
-	public lastFrame(): any
+	public lastFrame(): TFrame
 	{
 		return this.cache[this.cache.length - 1];
 	}
@@ -32,8 +32,8 @@ export abstract class SimulatorBase
 	{
 		// Update cache
 		// Find out how many frames needs to be generated
-		let totalTimeStep = this.offset + timeStep;
-		let framesToGenerate = Math.floor(totalTimeStep / this.frameTime);
+		const totalTimeStep = this.offset + timeStep;
+		const framesToGenerate = Math.floor(totalTimeStep / this.frameTime);
 		this.offset = totalTimeStep % this.frameTime;
 
 		// Generate simulation frames
@@ -47,6 +47,6 @@ export abstract class SimulatorBase
 		}
 	}
 
-	public abstract getFrame(isLastFrame: boolean): any;
+	public abstract getFrame(isLastFrame: boolean): TFrame;
 	public abstract simulate(timeStep: number): void;
 }

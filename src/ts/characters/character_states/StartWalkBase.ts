@@ -70,7 +70,7 @@ export class StartWalkBase extends CharacterStateBase
 		{
 			if (this.timer < 0.1)
 			{
-				let angle = Utils.getSignedAngleBetweenVectors(this.character.orientation, this.character.orientationTarget);
+				const angle = Utils.getSignedAngleBetweenVectors(this.character.orientation, this.character.orientationTarget);
 
 				if (angle > Math.PI * 0.4)
 				{

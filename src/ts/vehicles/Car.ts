@@ -4,9 +4,9 @@ import { Vehicle } from "./Vehicle";
 import { IControllable } from "../interfaces/IControllable";
 import { KeyBinding } from "../core/KeyBinding";
 import * as THREE from "three";
+import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as Utils from "../core/FunctionLibrary";
 import { SpringSimulator } from "../physics/spring_simulation/SpringSimulator";
-import { World } from "../world/World";
 import { EntityType } from "../enums/EntityType";
 
 export class Car extends Vehicle implements IControllable {
@@ -31,7 +31,7 @@ export class Car extends Vehicle implements IControllable {
   private canTiltForwards: boolean = false;
   private characterWantsToExit: boolean = false;
 
-  constructor(gltf: any) {
+  constructor(gltf: GLTF) {
     super(gltf, {
       radius: 0.25,
       suspensionStiffness: 20,
@@ -45,9 +45,7 @@ export class Car extends Vehicle implements IControllable {
 
     this.readCarData(gltf);
 
-    this.collision.preStep = (body: CANNON.Body) => {
-      this.physicsPreStep(body, this);
-    };
+		// Physics pre/post step callback bindings handled by World.ts
 
     this.actions = {
       throttle: new KeyBinding("KeyW"),
@@ -64,7 +62,7 @@ export class Car extends Vehicle implements IControllable {
   }
 
   public noDirectionPressed(): boolean {
-    let result =
+    const result =
       !this.actions.throttle.isPressed &&
       !this.actions.reverse.isPressed &&
       !this.actions.left.isPressed &&
@@ -145,7 +143,7 @@ export class Car extends Vehicle implements IControllable {
       this.controllingCharacter !== undefined &&
       this.controllingCharacter.charState.canLeaveVehicles
     ) {
-      let speed = this.collision.velocity.length();
+      const speed = this.collision.velocity.length();
 
       if (speed > 0.1 && speed < 4) {
         this.triggerAction("brake", true);
@@ -169,6 +167,7 @@ export class Car extends Vehicle implements IControllable {
     this.applyEngineForce(0);
   }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
   public physicsPreStep(body: CANNON.Body, car: Car): void {
     // Constants
     const quat = Utils.threeQuat(body.quaternion);
@@ -240,27 +239,27 @@ export class Car extends Vehicle implements IControllable {
     // Steering
     const velocity = new CANNON.Vec3().copy(this.collision.velocity);
     velocity.normalize();
-    let driftCorrection = Utils.getSignedAngleBetweenVectors(
+    const driftCorrection = Utils.getSignedAngleBetweenVectors(
       Utils.threeVector(velocity),
       forward,
     );
 
     const maxSteerVal = 0.8;
-    let speedFactor = THREE.MathUtils.clamp(
+    const speedFactor = THREE.MathUtils.clamp(
       this.speed * 0.3,
       1,
       Number.MAX_VALUE,
     );
 
     if (this.actions.right.isPressed) {
-      let steering = Math.min(-maxSteerVal / speedFactor, -driftCorrection);
+      const steering = Math.min(-maxSteerVal / speedFactor, -driftCorrection);
       this.steeringSimulator.target = THREE.MathUtils.clamp(
         steering,
         -maxSteerVal,
         maxSteerVal,
       );
     } else if (this.actions.left.isPressed) {
-      let steering = Math.max(maxSteerVal / speedFactor, -driftCorrection);
+      const steering = Math.max(maxSteerVal / speedFactor, -driftCorrection);
       this.steeringSimulator.target = THREE.MathUtils.clamp(
         steering,
         -maxSteerVal,
@@ -338,10 +337,10 @@ export class Car extends Vehicle implements IControllable {
     ]);
   }
 
-  public readCarData(gltf: any): void {
+  public readCarData(gltf: GLTF): void {
     gltf.scene.traverse((child: THREE.Object3D) => {
-      if (child.hasOwnProperty("userData")) {
-        if (child.userData.hasOwnProperty("data")) {
+      if (Object.hasOwn(child, "userData")) {
+        if (Object.hasOwn(child.userData, "data")) {
           if (child.userData.data === "steering_wheel") {
             this.steeringWheel = child;
           }

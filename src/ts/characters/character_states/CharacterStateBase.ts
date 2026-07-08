@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import * as Utils from '../../core/FunctionLibrary';
 import {
 	DropIdle,
@@ -20,7 +19,7 @@ export abstract class CharacterStateBase implements ICharacterState
 {
 	public character: Character;
 	public timer: number;
-	public animationLength: any;
+	public animationLength: unknown;
 
 	public canFindVehiclesToEnter: boolean;
 	public canEnterVehicles: boolean;
@@ -138,8 +137,8 @@ export abstract class CharacterStateBase implements ICharacterState
 
 	public setAppropriateStartWalkState(): void
 	{
-		let range = Math.PI;
-		let angle = Utils.getSignedAngleBetweenVectors(this.character.orientation, this.character.getCameraRelativeMovementVector());
+		const range = Math.PI;
+		const angle = Utils.getSignedAngleBetweenVectors(this.character.orientation, this.character.getCameraRelativeMovementVector());
 
 		if (angle > range * 0.8)
 		{

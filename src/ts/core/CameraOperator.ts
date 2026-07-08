@@ -19,8 +19,8 @@ export class CameraOperator implements IInputReceiver, IUpdatable
 	public theta: number;
 	public phi: number;
 	public onMouseDownPosition: THREE.Vector2;
-	public onMouseDownTheta: any;
-	public onMouseDownPhi: any;
+	public onMouseDownTheta: unknown;
+	public onMouseDownPhi: unknown;
 	public targetRadius: number = 1;
 
 	public movementSpeed: number;
@@ -85,13 +85,14 @@ export class CameraOperator implements IInputReceiver, IUpdatable
 		this.phi = Math.min(85, Math.max(-85, this.phi));
 	}
 
-	public update(timeScale: number): void
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	public update(_timeScale: number): void
 	{
 		if (this.followMode === true)
 		{
 			this.camera.position.y = THREE.MathUtils.clamp(this.camera.position.y, this.target.y, Number.POSITIVE_INFINITY);
 			this.camera.lookAt(this.target);
-			let newPos = this.target.clone().add(new THREE.Vector3().subVectors(this.camera.position, this.target).normalize().multiplyScalar(this.targetRadius));
+			const newPos = this.target.clone().add(new THREE.Vector3().subVectors(this.camera.position, this.target).normalize().multiplyScalar(this.targetRadius));
 			this.camera.position.x = newPos.x;
 			this.camera.position.y = newPos.y;
 			this.camera.position.z = newPos.z;
@@ -122,7 +123,7 @@ export class CameraOperator implements IInputReceiver, IUpdatable
 		else
 		{
 			for (const action in this.actions) {
-				if (this.actions.hasOwnProperty(action)) {
+				if (Object.hasOwn(this.actions, action)) {
 					const binding = this.actions[action];
 	
 					if (_.includes(binding.eventCodes, code))
@@ -142,7 +143,7 @@ export class CameraOperator implements IInputReceiver, IUpdatable
 	public handleMouseButton(event: MouseEvent, code: string, pressed: boolean): void
 	{
 		for (const action in this.actions) {
-			if (this.actions.hasOwnProperty(action)) {
+			if (Object.hasOwn(this.actions, action)) {
 				const binding = this.actions[action];
 
 				if (_.includes(binding.eventCodes, code))
@@ -187,7 +188,7 @@ export class CameraOperator implements IInputReceiver, IUpdatable
 	public inputReceiverUpdate(timeStep: number): void
 	{
 		// Set fly speed
-		let speed = this.movementSpeed * (this.actions.fast.isPressed ? timeStep * 600 : timeStep * 60);
+		const speed = this.movementSpeed * (this.actions.fast.isPressed ? timeStep * 600 : timeStep * 60);
 
 		const up = Utils.getUp(this.camera);
 		const right = Utils.getRight(this.camera);

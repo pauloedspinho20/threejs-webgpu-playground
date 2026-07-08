@@ -14,14 +14,15 @@ export class VehicleEntryInstance
 		this.character = character;
 	}
 
-	public update(timeStep: number): void
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	public update(_timeStep: number): void
 	{
-		let entryPointWorldPos = new THREE.Vector3();
+		const entryPointWorldPos = new THREE.Vector3();
 		this.entryPoint.getWorldPosition(entryPointWorldPos);
-		let viewVector = new THREE.Vector3().subVectors(entryPointWorldPos, this.character.position);
+		const viewVector = new THREE.Vector3().subVectors(entryPointWorldPos, this.character.position);
 		this.character.setOrientation(viewVector);
 		
-		let heightDifference = viewVector.y;
+		const heightDifference = viewVector.y;
 		viewVector.y = 0;
 		if (this.character.charState.canEnterVehicles && viewVector.length() < 0.2 && heightDifference < 2) {
 			this.character.enterVehicle(this.targetSeat, this.entryPoint);

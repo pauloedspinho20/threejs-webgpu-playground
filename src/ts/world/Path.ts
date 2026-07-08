@@ -16,13 +16,13 @@ export class Path
 		this.connectNodes();
 	}
 
-	public addNode(child: any): void
+	public addNode(child: THREE.Object3D): void
 	{
-		if (child.hasOwnProperty('userData') && child.userData.hasOwnProperty('data'))
+		if (Object.hasOwn(child, 'userData') && Object.hasOwn(child.userData, 'data'))
 		{
 			if (child.userData.data === 'pathNode')
 			{
-				let node = new PathNode(child, this);
+				const node = new PathNode(child, this);
 				this.nodes[child.name] = node;
 			}
 		}
@@ -32,7 +32,7 @@ export class Path
 	{
 		for (const nodeName in this.nodes)
 		{
-			if (this.nodes.hasOwnProperty(nodeName))
+			if (Object.hasOwn(this.nodes, nodeName))
 			{
 				const node = this.nodes[nodeName];
 				node.nextNode = this.nodes[node.object.userData.nextNode];

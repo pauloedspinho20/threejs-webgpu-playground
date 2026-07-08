@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { SeatType } from '../enums/SeatType';
-import { Side } from '../enums/Side';
 import { IControllable } from '../interfaces/IControllable';
 import { VehicleDoor } from './VehicleDoor';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Vehicle } from './Vehicle';
 import { Character } from '../characters/Character';
+import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 export class VehicleSeat
 {
@@ -23,21 +24,21 @@ export class VehicleSeat
 
 	public occupiedBy: Character = null;
 
-	constructor(vehicle: IControllable, object: THREE.Object3D, gltf: any)
+	constructor(vehicle: IControllable, object: THREE.Object3D, gltf: GLTF)
 	{
 		this.vehicle = vehicle;
 		this.seatPointObject = object;
 
-		if (object.hasOwnProperty('userData') && object.userData.hasOwnProperty('data'))
+		if (Object.hasOwn(object, 'userData') && Object.hasOwn(object.userData, 'data'))
 		{
-			if (object.userData.hasOwnProperty('door_object')) 
+			if (Object.hasOwn(object.userData, 'door_object')) 
 			{
 				this.door = new VehicleDoor(this, gltf.scene.getObjectByName(object.userData.door_object));
 			}
 
-			if (object.userData.hasOwnProperty('entry_points')) 
+			if (Object.hasOwn(object.userData, 'entry_points')) 
 			{
-				let entry_points = (object.userData.entry_points as string).split(';');
+				const entry_points = (object.userData.entry_points as string).split(';');
 				for (const entry_point of entry_points)
 				{
 					if (entry_point.length > 0)
@@ -51,7 +52,7 @@ export class VehicleSeat
 				console.error('Seat object ' + object + ' has no entry point reference property.');
 			}
 
-			if (object.userData.hasOwnProperty('seat_type')) 
+			if (Object.hasOwn(object.userData, 'seat_type')) 
 			{
 				this.type = object.userData.seat_type;
 			}
@@ -60,7 +61,7 @@ export class VehicleSeat
 				console.error('Seat object ' + object + ' has no seat type property.');
 			}
 
-			if (object.userData.hasOwnProperty('connected_seats')) 
+			if (Object.hasOwn(object.userData, 'connected_seats')) 
 			{
 				this.connectedSeatsString = object.userData.connected_seats;
 			}

@@ -3,7 +3,7 @@ import { SimulatorBase } from './SimulatorBase';
 import { SimulationFrame } from './SimulationFrame';
 import { spring } from '../../core/FunctionLibrary';
 
-export class SpringSimulator extends SimulatorBase
+export class SpringSimulator extends SimulatorBase<SimulationFrame>
 {
 	public position: number;
 	public velocity: number;
@@ -49,7 +49,8 @@ export class SpringSimulator extends SimulatorBase
 	/**
 	 * Gets another simulation frame
 	 */
-	public getFrame(isLastFrame: boolean): SimulationFrame
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	public getFrame(_isLastFrame: boolean): SimulationFrame
 	{
 		return spring(this.lastFrame().position, this.target, this.lastFrame().velocity, this.mass, this.damping);
 	}

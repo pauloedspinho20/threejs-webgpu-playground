@@ -27,18 +27,18 @@ export class FollowPath extends FollowTarget implements ICharacterAI
 		super.update(timeStep);
 
 		// Todo only compute once in followTarget
-		let source = new THREE.Vector3();
-		let target = new THREE.Vector3();
+		const source = new THREE.Vector3();
+		const target = new THREE.Vector3();
 		this.character.getWorldPosition(source);
 		this.target.getWorldPosition(target);
-		let viewVector = new THREE.Vector3().subVectors(target, source);
+		const viewVector = new THREE.Vector3().subVectors(target, source);
 		viewVector.y = 0;
 
-		let targetToNextNode = this.targetNode.nextNode.object.position.clone().sub(this.targetNode.object.position);
+		const targetToNextNode = this.targetNode.nextNode.object.position.clone().sub(this.targetNode.object.position);
 		targetToNextNode.y = 0;
 		targetToNextNode.normalize();
-		let slowDownAngle = viewVector.clone().normalize().dot(targetToNextNode);
-		let speed = (this.character.controlledObject as unknown as Vehicle).collision.velocity.length();
+		const slowDownAngle = viewVector.clone().normalize().dot(targetToNextNode);
+		const speed = (this.character.controlledObject as unknown as Vehicle).collision.velocity.length();
 
 		// console.log(slowDownAngle, viewVector.length(), speed);
 		if ((slowDownAngle < 0.7 && viewVector.length() < 50 && speed > 10))
@@ -51,7 +51,7 @@ export class FollowPath extends FollowTarget implements ICharacterAI
 		else this.staleTimer = 0;
 		if (this.staleTimer > 5)
 		{
-			let worldPos = new THREE.Vector3();
+			const worldPos = new THREE.Vector3();
 			this.targetNode.object.getWorldPosition(worldPos);
 			worldPos.y += 3;
 			(this.character.controlledObject as unknown as Vehicle).collision.position = Utils.cannonVector(worldPos);

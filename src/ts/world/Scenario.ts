@@ -26,31 +26,31 @@ export class Scenario
 		this.id = root.name;
 
 		// Scenario
-		if (root.userData.hasOwnProperty('name')) 
+		if (Object.hasOwn(root.userData, 'name')) 
 		{
 			this.name = root.userData.name;
 		}
-		if (root.userData.hasOwnProperty('default') && root.userData.default === 'true') 
+		if (Object.hasOwn(root.userData, 'default') && root.userData.default === 'true') 
 		{
 			this.default = true;
 		}
-		if (root.userData.hasOwnProperty('spawn_always') && root.userData.spawn_always === 'true') 
+		if (Object.hasOwn(root.userData, 'spawn_always') && root.userData.spawn_always === 'true') 
 		{
 			this.spawnAlways = true;
 		}
-		if (root.userData.hasOwnProperty('invisible') && root.userData.invisible === 'true') 
+		if (Object.hasOwn(root.userData, 'invisible') && root.userData.invisible === 'true') 
 		{
 			this.invisible = true;
 		}
-		if (root.userData.hasOwnProperty('desc_title')) 
+		if (Object.hasOwn(root.userData, 'desc_title')) 
 		{
 			this.descriptionTitle = root.userData.desc_title;
 		}
-		if (root.userData.hasOwnProperty('desc_content')) 
+		if (Object.hasOwn(root.userData, 'desc_content')) 
 		{
 			this.descriptionContent = root.userData.desc_content;
 		}
-		if (root.userData.hasOwnProperty('camera_angle')) 
+		if (Object.hasOwn(root.userData, 'camera_angle')) 
 		{
 			this.initialCameraAngle = root.userData.camera_angle;
 		}
@@ -59,24 +59,24 @@ export class Scenario
 
 		// Find all scenario spawns and enitites
 		root.traverse((child) => {
-			if (child.hasOwnProperty('userData') && child.userData.hasOwnProperty('data'))
+			if (Object.hasOwn(child, 'userData') && Object.hasOwn(child.userData, 'data'))
 			{
 				if (child.userData.data === 'spawn')
 				{
 					if (child.userData.type === 'car' || child.userData.type === 'airplane' || child.userData.type === 'heli')
 					{
-						let sp = new VehicleSpawnPoint(child);
+						const sp = new VehicleSpawnPoint(child);
 
-						if (child.userData.hasOwnProperty('type')) 
+						if (Object.hasOwn(child.userData, 'type')) 
 						{
 							sp.type = child.userData.type;
 						}
 
-						if (child.userData.hasOwnProperty('driver')) 
+						if (Object.hasOwn(child.userData, 'driver')) 
 						{
 							sp.driver = child.userData.driver;
 
-							if (child.userData.driver === 'ai' && child.userData.hasOwnProperty('first_node'))
+							if (child.userData.driver === 'ai' && Object.hasOwn(child.userData, 'first_node'))
 							{
 								sp.firstAINode = child.userData.first_node;
 							}
@@ -86,7 +86,7 @@ export class Scenario
 					}
 					else if (child.userData.type === 'player')
 					{
-						let sp = new CharacterSpawnPoint(child);
+						const sp = new CharacterSpawnPoint(child);
 						this.spawnPoints.push(sp);
 					}
 				}

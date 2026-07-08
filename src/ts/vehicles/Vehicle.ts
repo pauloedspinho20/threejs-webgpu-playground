@@ -1,12 +1,12 @@
 import { Character } from '../characters/Character';
 import * as THREE from 'three';
+import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as CANNON from 'cannon-es';
 import { World } from '../world/World';
 import * as _ from 'lodash';
 import { KeyBinding } from '../core/KeyBinding';
 import { VehicleSeat } from './VehicleSeat';
 import { Wheel } from './Wheel';
-import { VehicleDoor } from './VehicleDoor';
 import * as Utils from '../core/FunctionLibrary';
 import { CollisionGroups } from '../enums/CollisionGroups';
 import { SwitchingSeats } from '../characters/character_states/vehicles/SwitchingSeats';
@@ -24,7 +24,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 	public seats: VehicleSeat[] = [];
 	public wheels: Wheel[] = [];
 	public drive: string;
-	public camera: any;
+	public camera: THREE.Object3D;
 	public world: World;
 	public help: THREE.AxesHelper;
 	public collision: CANNON.Body;
@@ -34,17 +34,19 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 
 	private firstPerson: boolean = false;
 
-	constructor(gltf: any, handlingSetup?: any)
+	public physicsPreStep?(body: CANNON.Body, vehicle: Vehicle): void;
+
+	constructor(gltf: GLTF, handlingSetup?: CANNON.WheelInfoOptions)
 	{
 		super();
 
 		if (handlingSetup === undefined) handlingSetup = {};
-		handlingSetup.chassisConnectionPointLocal = new CANNON.Vec3(),
+		handlingSetup.chassisConnectionPointLocal = new CANNON.Vec3();
 		handlingSetup.axleLocal = new CANNON.Vec3(-1, 0, 0);
 		handlingSetup.directionLocal = new CANNON.Vec3(0, -1, 0);
 
 		// Physics mat
-		let mat = new CANNON.Material('Mat');
+		const mat = new CANNON.Material('Mat');
 		mat.friction = 0.01;
 
 		// Collision body
@@ -104,13 +106,13 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 		for (let i = 0; i < this.rayCastVehicle.wheelInfos.length; i++)
 		{
 			this.rayCastVehicle.updateWheelTransform(i);
-			let transform = this.rayCastVehicle.wheelInfos[i].worldTransform;
+			const transform = this.rayCastVehicle.wheelInfos[i].worldTransform;
 
-			let wheelObject = this.wheels[i].wheelObject;
+			const wheelObject = this.wheels[i].wheelObject;
 			wheelObject.position.copy(Utils.threeVector(transform.position));
 			wheelObject.quaternion.copy(Utils.threeQuat(transform.quaternion));
 
-			let upAxisWorld = new CANNON.Vec3();
+			const upAxisWorld = new CANNON.Vec3();
 			this.rayCastVehicle.getVehicleAxisWorld(this.rayCastVehicle.indexUpAxis, upAxisWorld);
 		}
 
@@ -142,7 +144,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 	public resetControls(): void
 	{
 		for (const action in this.actions) {
-			if (this.actions.hasOwnProperty(action)) {
+			if (Object.hasOwn(this.actions, action)) {
 				this.triggerAction(action, false);
 			}
 		}
@@ -174,7 +176,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 		else
 		{
 			for (const action in this.actions) {
-				if (this.actions.hasOwnProperty(action)) {
+				if (Object.hasOwn(this.actions, action)) {
 					const binding = this.actions[action];
 
 					if (_.includes(binding.eventCodes, code))
@@ -209,7 +211,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 	public triggerAction(actionName: string, value: boolean): void
 	{
 		// Get action and set it's parameters
-		let action = this.actions[actionName];
+		const action = this.actions[actionName];
 
 		if (action.isPressed !== value)
 		{
@@ -232,6 +234,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 		}
 	}
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	public handleMouseButton(event: MouseEvent, code: string, pressed: boolean): void
 	{
 		return;
@@ -253,6 +256,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 		this.setFirstPersonView(false);
 	}
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	public inputReceiverUpdate(timeStep: number): void
 	{
 		if (this.firstPerson)
@@ -263,7 +267,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 			//     this.position.z + this.camera.position.z
 			// );
 
-			let temp = new THREE.Vector3().copy(this.camera.position);
+			const temp = new THREE.Vector3().copy(this.camera.position);
 			temp.applyQuaternion(this.quaternion);
 			this.world.cameraOperator.target.copy(temp.add(this.position));
 		}
@@ -362,7 +366,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 		}
 	}
 
-	public readVehicleData(gltf: any): void
+	public readVehicleData(gltf: GLTF): void
 	{
 		gltf.scene.traverse((child) => {
 
@@ -376,9 +380,9 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 				}
 			}
 
-			if (child.hasOwnProperty('userData'))
+			if (Object.hasOwn(child, 'userData'))
 			{
-				if (child.userData.hasOwnProperty('data'))
+				if (Object.hasOwn(child.userData, 'data'))
 				{
 					if (child.userData.data === 'seat')
 					{
@@ -398,7 +402,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 						{
 							child.visible = false;
 
-							let phys = new CANNON.Box(new CANNON.Vec3(child.scale.x, child.scale.y, child.scale.z));
+							const phys = new CANNON.Box(new CANNON.Vec3(child.scale.x, child.scale.y, child.scale.z));
 							phys.collisionFilterMask = ~CollisionGroups.TrimeshColliders;
 							this.collision.addShape(phys, new CANNON.Vec3(child.position.x, child.position.y, child.position.z));
 						}
@@ -406,7 +410,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 						{
 							child.visible = false;
 
-							let phys = new CANNON.Sphere(child.scale.x);
+							const phys = new CANNON.Sphere(child.scale.x);
 							phys.collisionFilterGroup = CollisionGroups.TrimeshColliders;
 							this.collision.addShape(phys, new CANNON.Vec3(child.position.x, child.position.y, child.position.z));
 						}
@@ -440,7 +444,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 			if (firstSeat.connectedSeatsString !== undefined)
 			{
 				// Get list of connected seat names
-				let conn_seat_names = firstSeat.connectedSeatsString.split(';');
+				const conn_seat_names = firstSeat.connectedSeatsString.split(';');
 				for (const conn_seat_name of conn_seat_names)
 				{
 					// If name not empty

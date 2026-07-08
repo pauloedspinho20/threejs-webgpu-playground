@@ -3,7 +3,7 @@ import { ICharacterAI } from '../../interfaces/ICharacterAI';
 import * as Utils from '../../core/FunctionLibrary';
 import { Vehicle } from '../../vehicles/Vehicle';
 import { Character } from '../Character';
-import { Car } from '../../vehicles/Car';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { EntityType } from '../../enums/EntityType';
 
 export class FollowTarget implements ICharacterAI
@@ -25,17 +25,18 @@ export class FollowTarget implements ICharacterAI
 		this.target = target;
 	}
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	public update(timeStep: number): void
 	{
 		if (this.character.controlledObject !== undefined)
 		{
-			let source = new THREE.Vector3();
-			let target = new THREE.Vector3();
+			const source = new THREE.Vector3();
+			const target = new THREE.Vector3();
 
 			this.character.getWorldPosition(source);
 			this.target.getWorldPosition(target);
 
-			let viewVector = new THREE.Vector3().subVectors(target, source);
+			const viewVector = new THREE.Vector3().subVectors(target, source);
 
 			// Follow character
 			if (viewVector.length() > this.stopDistance)
@@ -47,13 +48,14 @@ export class FollowTarget implements ICharacterAI
 				this.isTargetReached = true;
 			}
 
-			let forward = new THREE.Vector3(0, 0, 1).applyQuaternion((this.character.controlledObject as unknown as THREE.Object3D).quaternion);
+			const forward = new THREE.Vector3(0, 0, 1).applyQuaternion((this.character.controlledObject as unknown as THREE.Object3D).quaternion);
 			viewVector.y = 0;
 			viewVector.normalize();
-			let angle = Utils.getSignedAngleBetweenVectors(forward, viewVector);
+			const angle = Utils.getSignedAngleBetweenVectors(forward, viewVector);
 
-			let goingForward = forward.dot(Utils.threeVector((this.character.controlledObject as unknown as Vehicle).collision.velocity)) > 0;
-			let speed = (this.character.controlledObject as unknown as Vehicle).collision.velocity.length();
+			const goingForward = forward.dot(Utils.threeVector((this.character.controlledObject as unknown as Vehicle).collision.velocity)) > 0;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			const speed = (this.character.controlledObject as unknown as Vehicle).collision.velocity.length();
 
 			if (forward.dot(viewVector) < 0.0)
 			{
@@ -103,7 +105,7 @@ export class FollowTarget implements ICharacterAI
 		}
 		else
 		{
-			let viewVector = new THREE.Vector3().subVectors(this.target.position, this.character.position);
+			const viewVector = new THREE.Vector3().subVectors(this.target.position, this.character.position);
 			this.character.setViewVector(viewVector);
 
 			// Follow character

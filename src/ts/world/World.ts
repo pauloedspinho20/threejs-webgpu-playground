@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
+import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import Swal from 'sweetalert2';
 import $ from 'jquery';
 
@@ -30,16 +31,38 @@ import { Scenario } from './Scenario';
 import { Sky } from './Sky';
 import { Ocean } from './Ocean';
 
+export interface IWorldParams {
+	Pointer_Lock: boolean;
+	Mouse_Sensitivity: number;
+	Time_Scale: number;
+	Shadows: boolean;
+	FXAA: boolean;
+	Debug_Physics: boolean;
+	Debug_FPS: boolean;
+	Sun_Elevation: number;
+	Sun_Rotation: number;
+}
+
+export interface IControlRow {
+	keys: string[];
+	desc: string;
+}
+
+export interface IPostProcessing {
+	outputNode: object;
+	render(): void;
+}
+
 export class World
 {
 	public renderer: THREE.WebGPURenderer;
 	public camera: THREE.PerspectiveCamera;
-	public postProcessing: any;
+	public postProcessing: IPostProcessing;
 	public stats: Stats;
 	public graphicsWorld: THREE.Scene;
 	public sky: Sky;
 	public physicsWorld: CANNON.World;
-	public parallelPairs: any[];
+	public parallelPairs: object[];
 	public physicsFrameRate: number;
 	public physicsFrameTime: number;
 	public physicsMaxPrediction: number;
@@ -49,7 +72,7 @@ export class World
 	public requestDelta: number;
 	public sinceLastFrame: number;
 	public justRendered: boolean;
-	public params: any;
+	public params: IWorldParams;
 	public inputManager: InputManager;
 	public cameraOperator: CameraOperator;
 	public timeScaleTarget: number = 1;
@@ -59,13 +82,14 @@ export class World
 	public characters: Character[] = [];
 	public vehicles: Vehicle[] = [];
 	public paths: Path[] = [];
-	public scenarioGUIFolder: any;
+	public scenarioGUIFolder: GUI.GUI;
 	public updatables: IUpdatable[] = [];
 
 	private lastScenarioID: string;
 
-	constructor(worldScenePath?: any)
+	constructor(worldScenePath?: string)
 	{
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const scope = this;
 
 		// WebGPU not supported (WebGPURenderer still auto-falls back to WebGL2)
@@ -142,7 +166,7 @@ export class World
 		// Load scene if path is supplied
 		if (worldScenePath !== undefined)
 		{
-			let loadingManager = new LoadingManager(this);
+			const loadingManager = new LoadingManager(this);
 			loadingManager.onFinishedCallback = () =>
 			{
 				this.update(1, 1);
@@ -204,8 +228,26 @@ export class World
 
 	public updatePhysics(timeStep: number): void
 	{
+		this.characters.forEach((char) => {
+			if (char.physicsEnabled) {
+				char.physicsPreStep(char.characterCapsule.body, char);
+			}
+		});
+
+		this.vehicles.forEach((vehicle) => {
+			if (vehicle.physicsPreStep) {
+				vehicle.physicsPreStep(vehicle.collision, vehicle);
+			}
+		});
+
 		// Step the physics world
 		this.physicsWorld.step(this.physicsFrameTime, timeStep);
+
+		this.characters.forEach((char) => {
+			if (char.physicsEnabled) {
+				char.physicsPostStep(char.characterCapsule.body, char);
+			}
+		});
 
 		this.characters.forEach((char) => {
 			if (this.isOutOfBounds(char.characterCapsule.body.position))
@@ -217,7 +259,7 @@ export class World
 		this.vehicles.forEach((vehicle) => {
 			if (this.isOutOfBounds(vehicle.rayCastVehicle.chassisBody.position))
 			{
-				let worldPos = new THREE.Vector3();
+				const worldPos = new THREE.Vector3();
 				vehicle.spawnPoint.getWorldPosition(worldPos);
 				worldPos.y += 1;
 				this.outOfBoundsRespawn(vehicle.rayCastVehicle.chassisBody, Utils.cannonVector(worldPos));
@@ -227,18 +269,18 @@ export class World
 
 	public isOutOfBounds(position: CANNON.Vec3): boolean
 	{
-		let inside = position.x > -211.882 && position.x < 211.882 &&
+		const inside = position.x > -211.882 && position.x < 211.882 &&
 					position.z > -169.098 && position.z < 153.232 &&
 					position.y > 0.107;
-		let belowSeaLevel = position.y < 14.989;
+		const belowSeaLevel = position.y < 14.989;
 
 		return !inside && belowSeaLevel;
 	}
 
 	public outOfBoundsRespawn(body: CANNON.Body, position?: CANNON.Vec3): void
 	{
-		let newPos = position || new CANNON.Vec3(0, 16, 0);
-		let newQuat = new CANNON.Quaternion(0, 0, 0, 1);
+		const newPos = position || new CANNON.Vec3(0, 16, 0);
+		const newQuat = new CANNON.Quaternion(0, 0, 0, 1);
 
 		body.position.copy(newPos);
 		body.interpolatedPosition.copy(newPos);
@@ -264,7 +306,7 @@ export class World
 		});
 
 		// Getting timeStep
-		let unscaledTimeStep = (this.requestDelta + this.renderDelta + this.logicDelta) ;
+		const unscaledTimeStep = (this.requestDelta + this.renderDelta + this.logicDelta) ;
 		let timeStep = unscaledTimeStep * this.params.Time_Scale;
 		timeStep = Math.min(timeStep, 1 / 30);    // min 30 fps
 
@@ -275,7 +317,7 @@ export class World
 		this.logicDelta = this.clock.getDelta();
 
 		// Frame limiting
-		let interval = 1 / 60;
+		const interval = 1 / 60;
 		this.sinceLastFrame += this.requestDelta + this.renderDelta + this.logicDelta;
 		this.sinceLastFrame %= interval;
 
@@ -320,10 +362,12 @@ export class World
 		_.pull(this.updatables, registree);
 	}
 
-	public loadScene(loadingManager: LoadingManager, gltf: any): void
+	public loadScene(loadingManager: LoadingManager, gltf: GLTF): void
 	{
-		gltf.scene.traverse((child) => {
-			if (child.hasOwnProperty('userData'))
+		gltf.scene.updateMatrixWorld(true);
+		
+		gltf.scene.traverse((child: THREE.Object3D) => {
+			if (Object.hasOwn(child, 'userData'))
 			{
 				if (child.type === 'Mesh')
 				{
@@ -335,18 +379,19 @@ export class World
 					}
 				}
 
-				if (child.userData.hasOwnProperty('data'))
+				if (Object.hasOwn(child.userData, 'data'))
 				{
 					if (child.userData.data === 'physics')
 					{
-						if (child.userData.hasOwnProperty('type')) 
+						if (Object.hasOwn(child.userData, 'type')) 
 						{
 							// Convex doesn't work! Stick to boxes!
 							if (child.userData.type === 'box')
 							{
-								let phys = new BoxCollider({size: new THREE.Vector3(child.scale.x, child.scale.y, child.scale.z)});
-								phys.body.position.copy(Utils.cannonVector(child.position));
-								phys.body.quaternion.copy(Utils.cannonQuat(child.quaternion));
+								const worldScale = child.getWorldScale(new THREE.Vector3());
+								const phys = new BoxCollider({size: new THREE.Vector3(worldScale.x, worldScale.y, worldScale.z)});
+								phys.body.position.copy(Utils.cannonVector(child.getWorldPosition(new THREE.Vector3())));
+								phys.body.quaternion.copy(Utils.cannonQuat(child.getWorldQuaternion(new THREE.Quaternion())));
 								phys.body.updateAABB();
 
 								phys.body.shapes.forEach((shape) => {
@@ -357,8 +402,12 @@ export class World
 							}
 							else if (child.userData.type === 'trimesh')
 							{
-								let phys = new TrimeshCollider(child, {});
-								this.physicsWorld.addBody(phys.body);
+								child.traverse((node: THREE.Object3D) => {
+									if ((node as THREE.Mesh).isMesh) {
+										const phys = new TrimeshCollider(node, {});
+										if (phys.body) this.physicsWorld.addBody(phys.body);
+									}
+								});
 							}
 
 							child.visible = false;
@@ -451,7 +500,7 @@ export class World
 		}
 	}
 
-	public updateControls(controls: any): void
+	public updateControls(controls: IControlRow[]): void
 	{
 		let html = '';
 		html += '<h2 class="controls-title">Controls:</h2>';
@@ -536,7 +585,7 @@ export class World
 		this.scenarioGUIFolder.open();
 
 		// World
-		let worldFolder = gui.addFolder('World');
+		const worldFolder = gui.addFolder('World');
 		worldFolder.add(this.params, 'Time_Scale', 0, 1).listen()
 			.onChange((value) =>
 			{
@@ -554,7 +603,7 @@ export class World
 			});
 
 		// Input
-		let settingsFolder = gui.addFolder('Settings');
+		const settingsFolder = gui.addFolder('Settings');
 		settingsFolder.add(this.params, 'FXAA');
 		settingsFolder.add(this.params, 'Shadows')
 			.onChange((enabled) =>

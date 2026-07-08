@@ -5,13 +5,13 @@ import { ICollider } from '../../interfaces/ICollider';
 
 export class SphereCollider implements ICollider
 {
-	public options: any;
+	public options: Record<string, unknown>;
 	public body: CANNON.Body;
 	public debugModel: THREE.Mesh;
 
-	constructor(options: any)
+	constructor(options: Record<string, unknown>)
 	{
-		let defaults = {
+		const defaults = {
 			mass: 0,
 			position: new CANNON.Vec3(),
 			radius: 0.3,
@@ -20,14 +20,14 @@ export class SphereCollider implements ICollider
 		options = Utils.setDefaults(options, defaults);
 		this.options = options;
 
-		let mat = new CANNON.Material('sphereMat');
+		const mat = new CANNON.Material('sphereMat');
 		mat.friction = options.friction;
 
-		let shape = new CANNON.Sphere(options.radius);
+		const shape = new CANNON.Sphere(options.radius);
 		// shape.material = mat;
 
 		// Add phys sphere
-		let physSphere = new CANNON.Body({
+		const physSphere = new CANNON.Body({
 			mass: options.mass,
 			position: options.position,
 			shape

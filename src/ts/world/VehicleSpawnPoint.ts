@@ -9,7 +9,6 @@ import { Vehicle } from '../vehicles/Vehicle';
 import { Character } from '../characters/Character';
 import { FollowPath } from '../characters/character_ai/FollowPath';
 import { LoadingManager } from '../core/LoadingManager';
-import { IWorldEntity } from '../interfaces/IWorldEntity';
 
 export class VehicleSpawnPoint implements ISpawnPoint
 {
@@ -26,13 +25,13 @@ export class VehicleSpawnPoint implements ISpawnPoint
 
 	public spawn(loadingManager: LoadingManager, world: World): void
 	{
-		loadingManager.loadGLTF('/assets/' + this.type + '.glb', (model: any) =>
+		loadingManager.loadGLTF('/assets/' + this.type + '.glb', (model: unknown) =>
 		{
-			let vehicle: Vehicle = this.getNewVehicleByType(model, this.type);
+			const vehicle: Vehicle = this.getNewVehicleByType(model, this.type);
 			vehicle.spawnPoint = this.object;
 
-			let worldPos = new THREE.Vector3();
-			let worldQuat = new THREE.Quaternion();
+			const worldPos = new THREE.Vector3();
+			const worldQuat = new THREE.Quaternion();
 			this.object.getWorldPosition(worldPos);
 			this.object.getWorldQuaternion(worldQuat);
 
@@ -44,7 +43,7 @@ export class VehicleSpawnPoint implements ISpawnPoint
 			{
 				loadingManager.loadGLTF('/assets/boxman.glb', (charModel) =>
 				{
-					let character = new Character(charModel);
+					const character = new Character(charModel);
 					world.add(character);
 					character.teleportToVehicle(vehicle, vehicle.seats[0]);
 
@@ -58,7 +57,7 @@ export class VehicleSpawnPoint implements ISpawnPoint
 						{
 							let nodeFound = false;
 							for (const pathName in world.paths) {
-								if (world.paths.hasOwnProperty(pathName)) {
+								if (Object.hasOwn(world.paths, pathName)) {
 									const path = world.paths[pathName];
 									
 									for (const nodeName in path.nodes) {
@@ -86,7 +85,7 @@ export class VehicleSpawnPoint implements ISpawnPoint
 		});
 	}
 
-	private getNewVehicleByType(model: any, type: string): Vehicle
+	private getNewVehicleByType(model: unknown, type: string): Vehicle
 	{
 		switch (type)
 		{

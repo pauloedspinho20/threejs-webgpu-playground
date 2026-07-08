@@ -29,10 +29,10 @@ export class Ocean implements IUpdatable
 	public material: THREE.MeshBasicNodeMaterial;
 
 	private world: World;
-	private uTime: any;
-	private lightDir: any;
+	private uTime: unknown;
+	private lightDir: unknown;
 
-	constructor(object: any, world: World)
+	constructor(object: unknown, world: World)
 	{
 		this.world = world;
 
@@ -47,12 +47,12 @@ export class Ocean implements IUpdatable
 		// mat2(1.6,1.2,-1.2,1.6) applied as `uv * m` (row vector) == transpose(m) * uv
 		const octave_m = mat2(1.6, -1.2, 1.2, 1.6);
 
-		const hash = Fn(([p]: any) => {
+		const hash = Fn(([p]: unknown[]) => {
 			const h = dot(p, vec2(127.1, 311.7));
 			return fract(sin(h).mul(43758.5453123));
 		});
 
-		const noise = Fn(([p]: any) => {
+		const noise = Fn(([p]: unknown[]) => {
 			const i = floor(p);
 			const f = fract(p);
 			const u = f.mul(f).mul(float(3.0).sub(f.mul(2.0)));
@@ -64,16 +64,16 @@ export class Ocean implements IUpdatable
 			return float(-1.0).add(res.mul(2.0));
 		});
 
-		const diffuse = Fn(([n, l, p]: any) => {
+		const diffuse = Fn(([n, l, p]: unknown[]) => {
 			return pow(dot(n, l).mul(0.4).add(0.6), p);
 		});
 
-		const specular = Fn(([n, l, e, s]: any) => {
+		const specular = Fn(([n, l, e, s]: unknown[]) => {
 			const nrm = s.add(8.0).div(3.1415 * 8.0);
 			return pow(max(dot(reflect(e, n), l), 0.0), s).mul(nrm);
 		});
 
-		const getSkyColor = Fn(([e]: any) => {
+		const getSkyColor = Fn(([e]: unknown[]) => {
 			const ey = max(e.y, 0.0);
 			return vec3(
 				pow(float(1.0).sub(ey), 2.0),
@@ -82,7 +82,7 @@ export class Ocean implements IUpdatable
 			);
 		});
 
-		const sea_octave = Fn(([uvIn, choppy]: any) => {
+		const sea_octave = Fn(([uvIn, choppy]: unknown[]) => {
 			const uv = uvIn.add(noise(uvIn));
 			const wv = float(1.0).sub(abs(sin(uv))).toVar();
 			const swv = abs(cos(uv));
@@ -91,7 +91,7 @@ export class Ocean implements IUpdatable
 		});
 
 		// map() and map_detailed() differ only in iteration count.
-		const makeMap = (iterations: number) => Fn(([p]: any) => {
+		const makeMap = (iterations: number) => Fn(([p]: unknown[]) => {
 			const freq = float(SEA_FREQ).toVar();
 			const amp = float(SEA_HEIGHT).toVar();
 			const choppy = float(SEA_CHOPPY).toVar();
@@ -113,7 +113,7 @@ export class Ocean implements IUpdatable
 		const map = makeMap(ITER_GEOMETRY);
 		const map_detailed = makeMap(ITER_FRAGMENT);
 
-		const getSeaColor = Fn(([p, n, l, eye, dist]: any) => {
+		const getSeaColor = Fn(([p, n, l, eye, dist]: unknown[]) => {
 			const fresnel = clamp(float(1.0).sub(max(dot(n, eye.negate()), 0.0)), 0.0, 1.0);
 			const fres = pow(fresnel, 3.0).mul(0.65);
 
@@ -133,7 +133,7 @@ export class Ocean implements IUpdatable
 			return color;
 		});
 
-		const getNormal = Fn(([p, eps]: any) => {
+		const getNormal = Fn(([p, eps]: unknown[]) => {
 			const ny = map_detailed(p);
 			const nx = map_detailed(vec3(p.x.add(eps), p.y, p.z)).sub(ny);
 			const nz = map_detailed(vec3(p.x, p.y, p.z.add(eps))).sub(ny);
@@ -141,7 +141,7 @@ export class Ocean implements IUpdatable
 		});
 
 		// Returns the hit point p (the original returns t via an out param).
-		const heightMapTracing = Fn(([ori, dir]: any) => {
+		const heightMapTracing = Fn(([ori, dir]: unknown[]) => {
 			const oriComp = vec3(ori.x, ori.y.sub(positionWorld.y.sub(SEA_HEIGHT)), ori.z);
 			const p = vec3(0.0).toVar();
 			const tm = float(0.0).toVar();

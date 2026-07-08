@@ -1,48 +1,62 @@
-import * as CANNON from 'cannon-es';
-import * as THREE from 'three';
-import * as Utils from '../../core/FunctionLibrary';
-import {ICollider} from '../../interfaces/ICollider';
-import {Object3D} from 'three';
-import { threeToCannon, ShapeType } from 'three-to-cannon';
+import * as THREE from "three";
+import * as CANNON from "cannon-es";
+import * as Utils from "../../core/FunctionLibrary";
+import { ICollider } from "../../interfaces/ICollider";
+import { Object3D } from "three";
+import { threeToCannon, ShapeType } from "three-to-cannon";
 
-export class TrimeshCollider implements ICollider
-{
-	public mesh: any;
-	public options: any;
-	public body: CANNON.Body;
-	public debugModel: any;
+export class TrimeshCollider implements ICollider {
+  public mesh: THREE.Mesh;
+  public options: Record<string, unknown>;
+  public body: CANNON.Body;
+  public debugModel: unknown;
 
-	constructor(mesh: Object3D, options: any)
-	{
-		this.mesh = mesh.clone();
+  constructor(mesh: Object3D, options: Record<string, unknown>) {
+    this.mesh = mesh.clone() as THREE.Mesh;
 
-		let defaults = {
-			mass: 0,
-			position: mesh.position,
-			rotation: mesh.quaternion,
-			friction: 0.3
-		};
-		options = Utils.setDefaults(options, defaults);
-		this.options = options;
+    // Bake world transform into geometry
+    let geometry = this.mesh.geometry.clone();
+    
+    // three-to-cannon naively assumes geometry is non-indexed, so we must unroll it
+    if (geometry.index) {
+        geometry = geometry.toNonIndexed();
+    }
+    
+    geometry.applyMatrix4(mesh.matrixWorld);
+    this.mesh.geometry = geometry;
 
-		let mat = new CANNON.Material('triMat');
-		mat.friction = options.friction;
-		// mat.restitution = 0.7;
+    const defaults = {
+      mass: 0,
+      position: new THREE.Vector3(0, 0, 0),
+      rotation: new THREE.Quaternion(0, 0, 0, 1),
+      friction: 0.3,
+    };
+    options = Utils.setDefaults(options, defaults);
+    this.options = options;
 
-		let result = threeToCannon(this.mesh, {type: ShapeType.MESH});
-		let shape = result.shape as unknown as CANNON.Shape;
-		// shape['material'] = mat;
+    const mat = new CANNON.Material("triMat");
+    mat.friction = options.friction;
+    // mat.restitution = 0.7;
 
-		// Add phys sphere
-		let physBox = new CANNON.Body({
-			mass: options.mass,
-			position: options.position,
-			quaternion: options.rotation,
-			shape: shape
-		});
+    const result = threeToCannon(this.mesh, { type: ShapeType.MESH });
+    if (!result) {
+      console.warn(`Could not generate CANNON.Shape for mesh:`, mesh);
+      return;
+    }
+    const shape = result.shape as CANNON.Shape;
+    // shape['material'] = mat;
 
-		physBox.material = mat;
+    // Add phys shape with offset and orientation if provided by threeToCannon
+    const physBox = new CANNON.Body({
+      mass: options.mass as number,
+      position: Utils.cannonVector(options.position as THREE.Vector3),
+      quaternion: Utils.cannonQuat(options.rotation as THREE.Quaternion),
+    });
 
-		this.body = physBox;
-	}
+    physBox.addShape(shape, result.offset, result.orientation);
+
+    physBox.material = mat;
+
+    this.body = physBox;
+  }
 }

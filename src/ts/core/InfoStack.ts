@@ -16,10 +16,10 @@ export class InfoStack implements IWorldEntity
 
 	public addMessage(text: string): void
 	{
-		let messageElement = document.createElement('div');
+		const messageElement = document.createElement('div');
 		messageElement.classList.add('console-message', 'animate__animated', this.entranceAnimation);
 		messageElement.style.setProperty('--animate-duration', '0.3s');
-		let textElement = document.createTextNode(text);
+		const textElement = document.createTextNode(text);
 		messageElement.appendChild(textElement);
 		document.getElementById('console').prepend(messageElement);
 		this.messages.push(new InfoStackMessage(this, messageElement));
@@ -32,11 +32,13 @@ export class InfoStack implements IWorldEntity
 		}
 	}
 
-	public addToWorld(world: World): void
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	public addToWorld(_world: World): void
 	{
 	}
 
-	public removeFromWorld(world: World): void
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	public removeFromWorld(_world: World): void
 	{
 	}
 }

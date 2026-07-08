@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import * as _ from 'lodash';
 import { SimulationFrame } from '../physics/spring_simulation/SimulationFrame';
-import { World } from '../world/World';
 import { Side } from '../enums/Side';
 import { Object3D } from 'three';
 import { Space } from '../enums/Space';
@@ -36,9 +35,9 @@ export function round(value: number, decimals: number = 0): number
 export function roundVector(vector: THREE.Vector3, decimals: number = 0): THREE.Vector3
 {
 	return new THREE.Vector3(
-		this.round(vector.x, decimals),
-		this.round(vector.y, decimals),
-		this.round(vector.z, decimals),
+		round(vector.x, decimals),
+		round(vector.y, decimals),
+		round(vector.z, decimals),
 	);
 }
 
@@ -50,7 +49,7 @@ export function roundVector(vector: THREE.Vector3, decimals: number = 0): THREE.
 export function getAngleBetweenVectors(v1: THREE.Vector3, v2: THREE.Vector3, dotTreshold: number = 0.0005): number
 {
 	let angle: number;
-	let dot = v1.dot(v2);
+	const dot = v1.dot(v2);
 
 	// If dot is close to 1, we'll round angle to zero
 	if (dot > 1 - dotTreshold)
@@ -79,10 +78,10 @@ export function getAngleBetweenVectors(v1: THREE.Vector3, v2: THREE.Vector3, dot
  */
 export function getSignedAngleBetweenVectors(v1: THREE.Vector3, v2: THREE.Vector3, normal: THREE.Vector3 = new THREE.Vector3(0, 1, 0), dotTreshold: number = 0.0005): number
 {
-	let angle = this.getAngleBetweenVectors(v1, v2, dotTreshold);
+	let angle = getAngleBetweenVectors(v1, v2, dotTreshold);
 
 	// Get vector pointing up or down
-	let cross = new THREE.Vector3().crossVectors(v1, v2);
+	const cross = new THREE.Vector3().crossVectors(v1, v2);
 	// Compare cross with normal to find out direction
 	if (normal.dot(cross) < 0)
 	{
@@ -106,16 +105,16 @@ export function haveDifferentSigns(n1: number, n2: number): boolean
 
 //#region Miscellaneous
 
-export function setDefaults(options: {}, defaults: {}): {}
+export function setDefaults<T extends object, U extends object>(options: T, defaults: U): T & U
 {
 	return _.defaults({}, _.clone(options), defaults);
 }
 
-export function getGlobalProperties(prefix: string = ''): any[]
+export function getGlobalProperties(prefix: string = ''): string[]
 {
-	let keyValues = [];
-	let global = window; // window for browser environments
-	for (let prop in global)
+	const keyValues: string[] = [];
+	const global = window; // window for browser environments
+	for (const prop in global)
 	{
 		// check the prefix
 		if (prop.indexOf(prefix) === 0) {
@@ -132,14 +131,14 @@ export function spring(source: number, dest: number, velocity: number, mass: num
 	velocity += acceleration;
 	velocity *= damping;
 
-	let position = source + velocity;
+	const position = source + velocity;
 
 	return new SimulationFrame(position, velocity);
 }
 
 export function springV(source: THREE.Vector3, dest: THREE.Vector3, velocity: THREE.Vector3, mass: number, damping: number): void
 {
-	let acceleration = new THREE.Vector3().subVectors(dest, source);
+	const acceleration = new THREE.Vector3().subVectors(dest, source);
 	acceleration.divideScalar(mass);
 	velocity.add(acceleration);
 	velocity.multiplyScalar(damping);
@@ -166,14 +165,14 @@ export function cannonQuat(quat: THREE.Quaternion): CANNON.Quaternion
 	return new CANNON.Quaternion(quat.x, quat.y, quat.z, quat.w);
 }
 
-export function setupMeshProperties(child: any): void
+export function setupMeshProperties(child: THREE.Object3D): void
 {
 	child.castShadow = true;
 	child.receiveShadow = true;
 
 	if (child.material.map !== null)
 	{
-		let mat = new THREE.MeshPhongMaterial();
+		const mat = new THREE.MeshPhongMaterial();
 		mat.shininess = 0;
 		mat.name = child.material.name;
 		mat.map = child.material.map;
@@ -251,9 +250,10 @@ export function getMatrix(obj: THREE.Object3D, space: Space): THREE.Matrix4
 	}
 }
 
-export function countSleepyBodies(): any
+export function countSleepyBodies(): number
 {
-	// let awake = 0;
+	const count = 0;
+	return count;
 	// let sleepy = 0;
 	// let asleep = 0;
 	// this.physicsWorld.bodies.forEach((body) =>
