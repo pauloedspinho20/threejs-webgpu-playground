@@ -168,9 +168,9 @@ export class World
 				this.setTimeScale(1);
 	
 				Swal.fire({
-					title: 'Welcome to Sketchbook!',
+					title: 'Welcome to the playground!',
 					text: 'Feel free to explore the world and interact with available vehicles. There are also various scenarios ready to launch from the right panel.',
-					footer: '<a href="https://github.com/swift502/Sketchbook" target="_blank">GitHub page</a><a href="https://discord.gg/fGuEqCe" target="_blank">Discord server</a>',
+					footer: '<a href="https://github.com/pauloedspinho20/threejs-webgpu-playground" target="_blank">GitHub page</a>',
 					confirmButtonText: 'Okay',
 					buttonsStyling: false,
 					onClose: () => {
@@ -191,7 +191,7 @@ export class World
 			Swal.fire({
 				icon: 'success',
 				title: 'Hello world!',
-				text: 'Empty Sketchbook world was succesfully initialized. Enjoy the blueness of the sky.',
+				text: 'Empty world was succesfully initialized. Enjoy the blueness of the sky.',
 				buttonsStyling: false
 			});
 		}
@@ -524,7 +524,7 @@ export class World
 		// Loader
 		$(`	<div id="loading-screen">
 				<div id="loading-screen-background"></div>
-				<h1 id="main-title" class="sb-font">Sketchbook 0.4</h1>
+				<h1 id="main-title" class="sb-font">threejs-webgpu-playground</h1>
 				<div class="cubeWrap">
 					<div class="cube">
 						<div class="faces1"></div>
@@ -538,7 +538,7 @@ export class World
 		// UI
 		$(`	<div id="ui-container" style="display: none;">
 				<div class="github-corner">
-					<a href="https://github.com/swift502/Sketchbook" target="_blank" title="Fork me on GitHub">
+					<a href="https://github.com/pauloedspinho20/threejs-webgpu-playground" target="_blank" title="Fork me on GitHub">
 						<svg viewbox="0 0 100 100" fill="currentColor">
 							<title>Fork me on GitHub</title>
 							<path d="M0 0v100h100V0H0zm60 70.2h.2c1 2.7.3 4.7 0 5.2 1.4 1.4 2 3 2 5.2 0 7.4-4.4 9-8.7 9.5.7.7 1.3 2
