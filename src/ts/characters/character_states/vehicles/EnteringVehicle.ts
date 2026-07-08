@@ -14,7 +14,7 @@ import { SpringSimulator } from "../../../physics/spring_simulation/SpringSimula
 
 export class EnteringVehicle extends CharacterStateBase {
   private vehicle: IControllable;
-  private animData: unknown;
+  private animData: any;
   private seat: VehicleSeat;
 
   private initialPositionOffset: THREE.Vector3 = new THREE.Vector3();
@@ -103,16 +103,15 @@ export class EnteringVehicle extends CharacterStateBase {
         lerpPosition.z,
       );
 
-      THREE.Quaternion.slerp(
+      this.character.quaternion.slerpQuaternions(
         this.startRotation,
         this.endRotation,
-        this.character.quaternion,
         this.factorSimulator.position,
       );
     }
   }
 
-  private getEntryAnimations(type: EntityType): Record<string, string> {
+  private getEntryAnimations(type: EntityType): Record<string, any> {
     switch (type) {
       case EntityType.Airplane:
         return {

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ISpawnPoint } from '../interfaces/ISpawnPoint';
 import { World } from '../world/World';
 import { Helicopter } from '../vehicles/Helicopter';
@@ -25,7 +26,7 @@ export class VehicleSpawnPoint implements ISpawnPoint
 
 	public spawn(loadingManager: LoadingManager, world: World): void
 	{
-		loadingManager.loadGLTF('/assets/' + this.type + '.glb', (model: unknown) =>
+		loadingManager.loadGLTF('/assets/' + this.type + '.glb', (model: GLTF) =>
 		{
 			const vehicle: Vehicle = this.getNewVehicleByType(model, this.type);
 			vehicle.spawnPoint = this.object;
@@ -85,7 +86,7 @@ export class VehicleSpawnPoint implements ISpawnPoint
 		});
 	}
 
-	private getNewVehicleByType(model: unknown, type: string): Vehicle
+	private getNewVehicleByType(model: GLTF, type: string): Vehicle
 	{
 		switch (type)
 		{

@@ -5,11 +5,11 @@ import { ICollider } from '../../interfaces/ICollider';
 
 export class SphereCollider implements ICollider
 {
-	public options: Record<string, unknown>;
+	public options: Record<string, any>;
 	public body: CANNON.Body;
 	public debugModel: THREE.Mesh;
 
-	constructor(options: Record<string, unknown>)
+	constructor(options: Record<string, any>)
 	{
 		const defaults = {
 			mass: 0,

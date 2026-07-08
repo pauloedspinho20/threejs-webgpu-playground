@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { ISpawnPoint } from '../interfaces/ISpawnPoint';
 import { VehicleSpawnPoint } from './VehicleSpawnPoint';
 import { CharacterSpawnPoint } from './CharacterSpawnPoint';

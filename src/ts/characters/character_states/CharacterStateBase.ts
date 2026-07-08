@@ -19,7 +19,7 @@ export abstract class CharacterStateBase implements ICharacterState
 {
 	public character: Character;
 	public timer: number;
-	public animationLength: unknown;
+	public animationLength: number;
 
 	public canFindVehiclesToEnter: boolean;
 	public canEnterVehicles: boolean;

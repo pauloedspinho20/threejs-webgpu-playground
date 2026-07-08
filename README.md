@@ -1,22 +1,14 @@
 <p align="center">
-	<a href="https://jblaha.art/sketchbook/latest"><img src="./src/img/thumbnail.png"></a>
-	<br>
-	<a href="https://jblaha.art/sketchbook/latest">Live demo</a>
-	<br>
+	<img src="./src/img/thumbnail.png">
 </p>
 
-# Final update (20. Feb 2023)
+# 🎮 threejs-webgpu-playground
 
-As I have no more interest in developing this project, it comes to a conclusion. In order to remain honest about the true state of the project, I am archiving this repository.
+A web-based **game-engine template** built on [three.js](https://github.com/mrdoob/three.js) **WebGPU** (with shaders written in [TSL](https://github.com/mrdoob/three.js/wiki/Three.js-Shading-Language)) and [cannon-es](https://github.com/pmndrs/cannon-es). It provides third-person character controls, drivable vehicles, physics, cascaded shadow maps, a procedural sky, and a Blender-authored world pipeline — a starting point for building interactive 3D spaces.
 
-- If you wish to modify Sketchbook feel free to fork it.
-- To see if someone is currently maintaining a fork, check out the [Network Graph](https://github.com/swift502/Sketchbook/network).
+It runs on the WebGPU backend where available and falls back to WebGL2 automatically. See [ROADMAP.md](ROADMAP.md) for where the project is headed.
 
-# 📒 Sketchbook
-
-Simple web based game engine built on [three.js](https://github.com/mrdoob/three.js) and [cannon.js](https://github.com/schteppe/cannon.js) focused on third-person character controls and related gameplay mechanics.
-
-Mostly a playground for exploring how conventional third person gameplay mechanics found in modern games work and recreating them in a general way.
+> Forked from and originally created as [Sketchbook](https://github.com/swift502/Sketchbook) by Jan Bláha (swift502). This fork migrates the engine from WebGL to three.js WebGPU + TSL, updates the toolchain to Vite + TypeScript, and swaps in cannon-es.
 
 ## Features
 

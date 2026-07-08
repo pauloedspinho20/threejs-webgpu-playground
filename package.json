@@ -1,5 +1,5 @@
 {
-  "name": "sketchbook",
+  "name": "threejs-webgpu-playground",
   "version": "0.4.0",
   "description": "3D playground built on three.js WebGPU (TSL) and cannon-es",
   "private": true,

@@ -7,11 +7,11 @@ import { threeToCannon, ShapeType } from "three-to-cannon";
 
 export class TrimeshCollider implements ICollider {
   public mesh: THREE.Mesh;
-  public options: Record<string, unknown>;
+  public options: Record<string, any>;
   public body: CANNON.Body;
   public debugModel: unknown;
 
-  constructor(mesh: Object3D, options: Record<string, unknown>) {
+  constructor(mesh: Object3D, options: Record<string, any>) {
     this.mesh = mesh.clone() as THREE.Mesh;
 
     // Bake world transform into geometry

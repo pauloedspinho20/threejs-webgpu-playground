@@ -1,4 +1,4 @@
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { GLTFLoader, GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { LoadingTrackerEntry } from './LoadingTrackerEntry';
 import { UIManager } from './UIManager';
 import { Scenario } from '../world/Scenario';
@@ -24,7 +24,7 @@ export class LoadingManager
 		UIManager.setLoadingScreenVisible(true);
 	}
 
-	public loadGLTF(path: string, onLoadingFinished: (gltf: unknown) => void): void
+	public loadGLTF(path: string, onLoadingFinished: (gltf: GLTF) => void): void
 	{
 		const trackerEntry = this.addLoadingEntry(path);
 

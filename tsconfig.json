@@ -13,6 +13,9 @@
         "allowSyntheticDefaultImports": true,
         "resolveJsonModule": true,
         "noEmit": true,
-        "baseUrl": "."
+        "baseUrl": ".",
+        "paths": {
+            "three": ["./node_modules/@types/three/build/three.webgpu.d.ts"]
+        }
     }
 }

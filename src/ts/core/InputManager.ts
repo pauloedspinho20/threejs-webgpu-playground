@@ -7,8 +7,8 @@ export class InputManager implements IUpdatable
 	public updateOrder: number = 3;
 
 	public world: World;
-	public domElement: unknown;
-	public pointerLock: unknown;
+	public domElement: HTMLElement;
+	public pointerLock: any;
 	public isLocked: boolean;
 	public inputReceiver: IInputReceiver;
 
@@ -30,18 +30,18 @@ export class InputManager implements IUpdatable
 		
 		// Bindings for later event use
 		// Mouse
-		this.boundOnMouseDown = (evt) => this.onMouseDown(evt);
-		this.boundOnMouseMove = (evt) => this.onMouseMove(evt);
-		this.boundOnMouseUp = (evt) => this.onMouseUp(evt);
-		this.boundOnMouseWheelMove = (evt) => this.onMouseWheelMove(evt);
+		this.boundOnMouseDown = (evt) => this.onMouseDown(evt as MouseEvent);
+		this.boundOnMouseMove = (evt) => this.onMouseMove(evt as MouseEvent);
+		this.boundOnMouseUp = (evt) => this.onMouseUp(evt as MouseEvent);
+		this.boundOnMouseWheelMove = (evt) => this.onMouseWheelMove(evt as WheelEvent);
 
 		// Pointer lock
-		this.boundOnPointerlockChange = (evt) => this.onPointerlockChange(evt);
-		this.boundOnPointerlockError = (evt) => this.onPointerlockError(evt);
+		this.boundOnPointerlockChange = (evt) => this.onPointerlockChange(evt as MouseEvent);
+		this.boundOnPointerlockError = (evt) => this.onPointerlockError(evt as MouseEvent);
 
 		// Keys
-		this.boundOnKeyDown = (evt) => this.onKeyDown(evt);
-		this.boundOnKeyUp = (evt) => this.onKeyUp(evt);
+		this.boundOnKeyDown = (evt) => this.onKeyDown(evt as KeyboardEvent);
+		this.boundOnKeyUp = (evt) => this.onKeyUp(evt as KeyboardEvent);
 
 		// Init event listeners
 		// Mouse

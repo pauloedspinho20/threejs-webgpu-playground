@@ -170,16 +170,18 @@ export function setupMeshProperties(child: THREE.Object3D): void
 	child.castShadow = true;
 	child.receiveShadow = true;
 
-	if (child.material.map !== null)
+	const mesh = child as THREE.Mesh;
+	const material = mesh.material as THREE.MeshStandardMaterial;
+	if (material.map !== null)
 	{
 		const mat = new THREE.MeshPhongMaterial();
 		mat.shininess = 0;
-		mat.name = child.material.name;
-		mat.map = child.material.map;
+		mat.name = material.name;
+		mat.map = material.map;
 		mat.map.anisotropy = 4;
-		mat.aoMap = child.material.aoMap;
-		mat.transparent = child.material.transparent;
-		child.material = mat;
+		mat.aoMap = material.aoMap;
+		mat.transparent = material.transparent;
+		mesh.material = mat;
 	}
 }
 

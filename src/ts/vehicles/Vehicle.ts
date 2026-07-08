@@ -113,7 +113,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 			wheelObject.quaternion.copy(Utils.threeQuat(transform.quaternion));
 
 			const upAxisWorld = new CANNON.Vec3();
-			this.rayCastVehicle.getVehicleAxisWorld(this.rayCastVehicle.indexUpAxis, upAxisWorld);
+			(this.rayCastVehicle as any).getVehicleAxisWorld(this.rayCastVehicle.indexUpAxis, upAxisWorld);
 		}
 
 		this.updateMatrixWorld();
@@ -370,13 +370,13 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 	{
 		gltf.scene.traverse((child) => {
 
-			if (child.isMesh)
+			if ((child as THREE.Mesh).isMesh)
 			{
 				Utils.setupMeshProperties(child);
 
-				if (child.material !== undefined)
+				if ((child as THREE.Mesh).material !== undefined)
 				{
-					this.materials.push(child.material);
+					this.materials.push((child as THREE.Mesh).material as THREE.Material);
 				}
 			}
 

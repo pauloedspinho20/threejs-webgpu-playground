@@ -77,7 +77,7 @@ export class SwitchingSeats extends CharacterStateBase
 			const lerpPosition = new THREE.Vector3().lerpVectors(this.startPosition, this.endPosition, sineFactor);
 			this.character.setPosition(lerpPosition.x, lerpPosition.y, lerpPosition.z);
 	
-			THREE.Quaternion.slerp(this.startRotation, this.endRotation, this.character.quaternion, sineFactor);
+			this.character.quaternion.slerpQuaternions(this.startRotation, this.endRotation, sineFactor);
 		}
 	}
 }

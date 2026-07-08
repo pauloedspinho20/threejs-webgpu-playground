@@ -48,16 +48,11 @@ export interface IControlRow {
 	desc: string;
 }
 
-export interface IPostProcessing {
-	outputNode: object;
-	render(): void;
-}
-
 export class World
 {
 	public renderer: THREE.WebGPURenderer;
 	public camera: THREE.PerspectiveCamera;
-	public postProcessing: IPostProcessing;
+	public postProcessing: THREE.PostProcessing;
 	public stats: Stats;
 	public graphicsWorld: THREE.Scene;
 	public sky: Sky;
@@ -229,7 +224,7 @@ export class World
 	public updatePhysics(timeStep: number): void
 	{
 		this.characters.forEach((char) => {
-			if (char.physicsEnabled) {
+			if ((char as any).physicsEnabled) {
 				char.physicsPreStep(char.characterCapsule.body, char);
 			}
 		});
@@ -244,7 +239,7 @@ export class World
 		this.physicsWorld.step(this.physicsFrameTime, timeStep);
 
 		this.characters.forEach((char) => {
-			if (char.physicsEnabled) {
+			if ((char as any).physicsEnabled) {
 				char.physicsPostStep(char.characterCapsule.body, char);
 			}
 		});
@@ -373,7 +368,7 @@ export class World
 				{
 					Utils.setupMeshProperties(child);
 
-					if (child.material.name === 'ocean')
+					if (((child as THREE.Mesh).material as THREE.Material).name === 'ocean')
 					{
 						this.registerUpdatable(new Ocean(child, this));
 					}
