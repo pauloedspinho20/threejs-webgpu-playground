@@ -2,7 +2,7 @@ import * as GUI from 'dat.gui';
 import Swal from 'sweetalert2';
 import { Stats } from '../../lib/utils/Stats';
 import { Engine } from '../engine/Engine';
-import { IControlRow, ScenarioInfo, WelcomeInfo } from '../core/EngineEvents';
+import { IControlRow, ScenarioInfo, WelcomeInfo } from '../engine/EngineEvents';
 
 /**
  * App-side UI host. Owns all DOM chrome, the debug GUI, the FPS stats panel,

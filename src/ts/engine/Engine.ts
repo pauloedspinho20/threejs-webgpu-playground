@@ -2,10 +2,10 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-import { CameraOperator } from '../core/CameraOperator';
-import { EngineOptions, ResolvedEngineOptions, resolveEngineOptions } from '../core/EngineOptions';
-import type { IWorldParams, EngineContext } from '../core/EngineContext';
-import { Emitter, EngineEvents, IControlRow, ScenarioInfo } from '../core/EngineEvents';
+import { CameraOperator } from './CameraOperator';
+import { EngineOptions, ResolvedEngineOptions, resolveEngineOptions } from './EngineOptions';
+import type { IWorldParams, EngineContext } from './EngineContext';
+import { Emitter, EngineEvents, IControlRow, ScenarioInfo } from './EngineEvents';
 import { pass } from 'three/tsl';
 import { fxaa } from 'three/addons/tsl/display/FXAANode.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
@@ -13,23 +13,23 @@ import WebGPU from 'three/addons/capabilities/WebGPU.js';
 import { CannonDebugRenderer } from '../../lib/cannon/CannonDebugRenderer';
 import * as _ from 'lodash';
 
-import { InputManager } from '../core/InputManager';
-import * as Utils from '../core/FunctionLibrary';
-import { LoadingManager } from '../core/LoadingManager';
-import { IWorldEntity } from '../interfaces/IWorldEntity';
-import { IUpdatable } from '../interfaces/IUpdatable';
-import { Character } from '../characters/Character';
-import { Path } from '../world/Path';
-import { CollisionGroups } from '../enums/CollisionGroups';
-import { BoxCollider } from '../physics/colliders/BoxCollider';
-import { TrimeshCollider } from '../physics/colliders/TrimeshCollider';
-import { Vehicle } from '../vehicles/Vehicle';
-import { Scenario } from '../world/Scenario';
-import { Sky } from '../world/Sky';
-import { Ocean } from '../world/Ocean';
+import { InputManager } from './InputManager';
+import * as Utils from './FunctionLibrary';
+import { LoadingManager } from './LoadingManager';
+import { IWorldEntity } from './interfaces/IWorldEntity';
+import { IUpdatable } from './interfaces/IUpdatable';
+import { Character } from '../game/characters/Character';
+import { Path } from '../game/world/Path';
+import { CollisionGroups } from './enums/CollisionGroups';
+import { BoxCollider } from './physics/colliders/BoxCollider';
+import { TrimeshCollider } from './physics/colliders/TrimeshCollider';
+import { Vehicle } from '../game/vehicles/Vehicle';
+import { Scenario } from '../game/world/Scenario';
+import { Sky } from './world/Sky';
+import { Ocean } from './world/Ocean';
 
-export type { IControlRow } from '../core/EngineEvents';
-export type { IWorldParams, EngineContext } from '../core/EngineContext';
+export type { IControlRow } from './EngineEvents';
+export type { IWorldParams, EngineContext } from './EngineContext';
 
 export class Engine implements EngineContext
 {

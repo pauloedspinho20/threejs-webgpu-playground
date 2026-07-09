@@ -18,7 +18,7 @@ export default tseslint.config(
     // typed — `any` is idiomatic for TSL `Fn` params and node locals, and the
     // alternative (`unknown`) breaks the node method chaining. Relax
     // no-explicit-any for shader files only. Add new TSL modules to this glob.
-    files: ['src/ts/world/Ocean.ts', 'src/ts/**/shaders/**/*.ts'],
+    files: ['src/ts/engine/world/Ocean.ts', 'src/ts/**/shaders/**/*.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off'
     }

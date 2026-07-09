@@ -12,23 +12,23 @@
 export { Engine, createEngine } from './engine/Engine';
 
 // Configuration
-export type { EngineOptions, ResolvedEngineOptions, WorldBounds } from './core/EngineOptions';
-export { resolveEngineOptions, DEMO_WORLD_BOUNDS } from './core/EngineOptions';
+export type { EngineOptions, ResolvedEngineOptions, WorldBounds } from './engine/EngineOptions';
+export { resolveEngineOptions, DEMO_WORLD_BOUNDS } from './engine/EngineOptions';
 
 // The contract entities depend on
-export type { EngineContext, IWorldParams } from './core/EngineContext';
+export type { EngineContext, IWorldParams } from './engine/EngineContext';
 
 // Events
-export type { EngineEvents, ScenarioInfo, WelcomeInfo, IControlRow, Listener } from './core/EngineEvents';
-export { Emitter } from './core/EngineEvents';
+export type { EngineEvents, ScenarioInfo, WelcomeInfo, IControlRow, Listener } from './engine/EngineEvents';
+export { Emitter } from './engine/EngineEvents';
 
 // Extension interfaces
-export type { IUpdatable } from './interfaces/IUpdatable';
-export type { IWorldEntity } from './interfaces/IWorldEntity';
-export type { ISpawnPoint } from './interfaces/ISpawnPoint';
-export type { ICollider } from './interfaces/ICollider';
+export type { IUpdatable } from './engine/interfaces/IUpdatable';
+export type { IWorldEntity } from './engine/interfaces/IWorldEntity';
+export type { ISpawnPoint } from './engine/interfaces/ISpawnPoint';
+export type { ICollider } from './engine/interfaces/ICollider';
 
 // Core subsystems (useful for advanced consumers)
-export { InputManager } from './core/InputManager';
-export { CameraOperator } from './core/CameraOperator';
-export { LoadingManager } from './core/LoadingManager';
+export { InputManager } from './engine/InputManager';
+export { CameraOperator } from './engine/CameraOperator';
+export { LoadingManager } from './engine/LoadingManager';
