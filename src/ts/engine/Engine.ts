@@ -16,17 +16,19 @@ import * as _ from 'lodash';
 import { InputManager } from './InputManager';
 import * as Utils from './FunctionLibrary';
 import { LoadingManager } from './LoadingManager';
+import { EntityRegistry } from './EntityRegistry';
+import { SceneLoader } from './SceneLoader';
 import { IWorldEntity } from './interfaces/IWorldEntity';
 import { IUpdatable } from './interfaces/IUpdatable';
-import { Character } from '../game/characters/Character';
-import { Path } from '../game/world/Path';
 import { CollisionGroups } from './enums/CollisionGroups';
 import { BoxCollider } from './physics/colliders/BoxCollider';
 import { TrimeshCollider } from './physics/colliders/TrimeshCollider';
-import { Vehicle } from '../game/vehicles/Vehicle';
-import { Scenario } from '../game/world/Scenario';
 import { Sky } from './world/Sky';
 import { Ocean } from './world/Ocean';
+import type { Character } from '../game/characters/Character';
+import type { Path } from '../game/world/Path';
+import type { Vehicle } from '../game/vehicles/Vehicle';
+import type { Scenario } from '../game/world/Scenario';
 
 export type { IControlRow } from './EngineEvents';
 export type { IWorldParams, EngineContext } from './EngineContext';
@@ -63,6 +65,10 @@ export class Engine implements EngineContext
 
 	/** Event bus. The app layer subscribes to render UI (dialogs, menus, HUD). */
 	public readonly events = new Emitter<EngineEvents>();
+	/** Registry mapping entity `kind` -> factory (consumers register their types). */
+	public readonly entities = new EntityRegistry();
+	/** Registry of glb userData/material handlers (consumers register conventions). */
+	public readonly sceneLoader = new SceneLoader();
 	/** Optional per-frame profiler hook (e.g. a Stats panel), owned by the app. */
 	public profiler?: { begin(): void; end(): void };
 
@@ -147,7 +153,10 @@ export class Engine implements EngineContext
 		this.inputManager = new InputManager(this, this.renderer.domElement);
 		this.cameraOperator = new CameraOperator(this, this.camera, this.params.Mouse_Sensitivity);
 		this.sky = new Sky(this);
-		
+
+		// Register the engine's built-in glb handlers (generic physics + water).
+		this.registerEngineHandlers();
+
 		// Load scene if a world is supplied
 		if (opts.world !== null)
 		{
@@ -428,80 +437,57 @@ export class Engine implements EngineContext
 
 	public loadScene(loadingManager: LoadingManager, gltf: GLTF): void
 	{
-		gltf.scene.updateMatrixWorld(true);
-		
-		gltf.scene.traverse((child: THREE.Object3D) => {
-			if (Object.hasOwn(child, 'userData'))
+		// Traversal + handler dispatch (adds the scene to graphicsWorld).
+		this.sceneLoader.load(gltf, this);
+
+		// Launch the scenario flagged `default` (if any) on the shared loader so
+		// the world + its spawned entities finish loading as one batch.
+		const defaultScenario = this.scenarios.find((s) => s.default);
+		if (defaultScenario !== undefined) this.launchScenario(defaultScenario.id, loadingManager);
+	}
+
+	/** Register the engine's built-in glb handlers (generic; no game types). */
+	private registerEngineHandlers(): void
+	{
+		// Physics colliders authored in Blender via userData.data = 'physics'.
+		this.sceneLoader.onUserData('data', 'physics', ({ node, data, ctx }) =>
+		{
+			// Convex doesn't work! Stick to boxes!
+			if (data.type === 'box')
 			{
-				if (child.type === 'Mesh')
+				const worldScale = node.getWorldScale(new THREE.Vector3());
+				const phys = new BoxCollider({ size: new THREE.Vector3(worldScale.x, worldScale.y, worldScale.z) });
+				phys.body.position.copy(Utils.cannonVector(node.getWorldPosition(new THREE.Vector3())));
+				phys.body.quaternion.copy(Utils.cannonQuat(node.getWorldQuaternion(new THREE.Quaternion())));
+				phys.body.updateAABB();
+
+				phys.body.shapes.forEach((shape) =>
 				{
-					Utils.setupMeshProperties(child);
+					shape.collisionFilterMask = ~CollisionGroups.TrimeshColliders;
+				});
 
-					if (((child as THREE.Mesh).material as THREE.Material).name === 'ocean')
-					{
-						this.registerUpdatable(new Ocean(child, this));
-					}
-				}
-
-				if (Object.hasOwn(child.userData, 'data'))
+				ctx.physicsWorld.addBody(phys.body);
+				node.visible = false;
+			}
+			else if (data.type === 'trimesh')
+			{
+				node.traverse((child: THREE.Object3D) =>
 				{
-					if (child.userData.data === 'physics')
+					if ((child as THREE.Mesh).isMesh)
 					{
-						if (Object.hasOwn(child.userData, 'type')) 
-						{
-							// Convex doesn't work! Stick to boxes!
-							if (child.userData.type === 'box')
-							{
-								const worldScale = child.getWorldScale(new THREE.Vector3());
-								const phys = new BoxCollider({size: new THREE.Vector3(worldScale.x, worldScale.y, worldScale.z)});
-								phys.body.position.copy(Utils.cannonVector(child.getWorldPosition(new THREE.Vector3())));
-								phys.body.quaternion.copy(Utils.cannonQuat(child.getWorldQuaternion(new THREE.Quaternion())));
-								phys.body.updateAABB();
-
-								phys.body.shapes.forEach((shape) => {
-									shape.collisionFilterMask = ~CollisionGroups.TrimeshColliders;
-								});
-
-								this.physicsWorld.addBody(phys.body);
-							}
-							else if (child.userData.type === 'trimesh')
-							{
-								child.traverse((node: THREE.Object3D) => {
-									if ((node as THREE.Mesh).isMesh) {
-										const phys = new TrimeshCollider(node, {});
-										if (phys.body) this.physicsWorld.addBody(phys.body);
-									}
-								});
-							}
-
-							child.visible = false;
-						}
+						const phys = new TrimeshCollider(child, {});
+						if (phys.body) ctx.physicsWorld.addBody(phys.body);
 					}
-
-					if (child.userData.data === 'path')
-					{
-						this.paths.push(new Path(child));
-					}
-
-					if (child.userData.data === 'scenario')
-					{
-						this.scenarios.push(new Scenario(child, this));
-					}
-				}
+				});
+				node.visible = false;
 			}
 		});
 
-		this.graphicsWorld.add(gltf.scene);
-
-		// Launch default scenario
-		let defaultScenarioID: string;
-		for (const scenario of this.scenarios) {
-			if (scenario.default) {
-				defaultScenarioID = scenario.id;
-				break;
-			}
-		}
-		if (defaultScenarioID !== undefined) this.launchScenario(defaultScenarioID, loadingManager);
+		// Water: any mesh whose material is named 'ocean'.
+		this.sceneLoader.onMaterial('ocean', (mesh, ctx) =>
+		{
+			ctx.registerUpdatable(new Ocean(mesh, ctx));
+		});
 	}
 	
 	public launchScenario(scenarioID: string, loadingManager?: LoadingManager): void

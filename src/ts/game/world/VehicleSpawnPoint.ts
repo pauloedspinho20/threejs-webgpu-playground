@@ -2,12 +2,9 @@ import * as THREE from 'three';
 import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ISpawnPoint } from '../../engine/interfaces/ISpawnPoint';
 import type { EngineContext } from '../../engine/EngineContext';
-import { Helicopter } from '../vehicles/Helicopter';
-import { Airplane } from '../vehicles/Airplane';
-import { Car } from '../vehicles/Car';
 import * as Utils from '../../engine/FunctionLibrary';
-import { Vehicle } from '../vehicles/Vehicle';
-import { Character } from '../characters/Character';
+import type { Vehicle } from '../vehicles/Vehicle';
+import type { Character } from '../characters/Character';
 import { FollowPath } from '../characters/character_ai/FollowPath';
 import { LoadingManager } from '../../engine/LoadingManager';
 
@@ -28,7 +25,7 @@ export class VehicleSpawnPoint implements ISpawnPoint
 	{
 		loadingManager.loadGLTF(world.resolveAsset(this.type + '.glb'), (model: GLTF) =>
 		{
-			const vehicle: Vehicle = this.getNewVehicleByType(model, this.type);
+			const vehicle = world.entities.create(this.type, world, { model }) as Vehicle;
 			vehicle.spawnPoint = this.object;
 
 			const worldPos = new THREE.Vector3();
@@ -44,7 +41,7 @@ export class VehicleSpawnPoint implements ISpawnPoint
 			{
 				loadingManager.loadGLTF(world.resolveAsset('boxman.glb'), (charModel) =>
 				{
-					const character = new Character(charModel);
+					const character = world.entities.create('player', world, { model: charModel }) as Character;
 					world.add(character);
 					character.teleportToVehicle(vehicle, vehicle.seats[0]);
 
@@ -86,13 +83,4 @@ export class VehicleSpawnPoint implements ISpawnPoint
 		});
 	}
 
-	private getNewVehicleByType(model: GLTF, type: string): Vehicle
-	{
-		switch (type)
-		{
-			case 'car': return new Car(model);
-			case 'heli': return new Helicopter(model);
-			case 'airplane': return new Airplane(model);
-		}
-	}
 }

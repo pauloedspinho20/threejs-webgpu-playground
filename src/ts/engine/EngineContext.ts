@@ -6,6 +6,8 @@ import type { InputManager } from './InputManager';
 import type { LoadingManager } from './LoadingManager';
 import type { Emitter, EngineEvents, IControlRow } from './EngineEvents';
 import type { ResolvedEngineOptions } from './EngineOptions';
+import type { EntityRegistry } from './EntityRegistry';
+import type { SceneLoader } from './SceneLoader';
 import type { IUpdatable } from './interfaces/IUpdatable';
 import type { IWorldEntity } from './interfaces/IWorldEntity';
 import type { Sky } from './world/Sky';
@@ -52,6 +54,10 @@ export interface EngineContext
 	readonly cameraOperator: CameraOperator;
 	readonly inputManager: InputManager;
 	readonly sky: Sky;
+
+	// Plugin registries
+	readonly entities: EntityRegistry;
+	readonly sceneLoader: SceneLoader;
 
 	// State
 	readonly events: Emitter<EngineEvents>;

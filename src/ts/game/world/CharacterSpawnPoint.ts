@@ -1,7 +1,7 @@
 import { ISpawnPoint } from '../../engine/interfaces/ISpawnPoint';
 import * as THREE from 'three';
 import type { EngineContext } from '../../engine/EngineContext';
-import { Character } from '../characters/Character';
+import type { Character } from '../characters/Character';
 import { LoadingManager } from '../../engine/LoadingManager';
 import * as Utils from '../../engine/FunctionLibrary';
 
@@ -18,7 +18,7 @@ export class CharacterSpawnPoint implements ISpawnPoint
 	{
 		loadingManager.loadGLTF(world.resolveAsset('boxman.glb'), (model) =>
 		{
-			const player = new Character(model);
+			const player = world.entities.create('player', world, { model }) as Character;
 			
 			const worldPos = new THREE.Vector3();
 			this.object.getWorldPosition(worldPos);

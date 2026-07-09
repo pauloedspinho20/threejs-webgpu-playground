@@ -3,7 +3,7 @@ import * as Utils from './FunctionLibrary';
 import type { EngineContext } from './EngineContext';
 import { IInputReceiver } from './interfaces/IInputReceiver';
 import { KeyBinding } from './KeyBinding';
-import { Character } from '../game/characters/Character';
+import type { Character } from '../game/characters/Character';
 import * as _ from 'lodash';
 import { IUpdatable } from './interfaces/IUpdatable';
 
