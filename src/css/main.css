@@ -1,3 +1,6 @@
+@import "modules/githubCorner.css";
+@import "modules/dat.gui.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -75,6 +78,4 @@
   }
 }
 
-/* Include remaining modules */
-@import "modules/githubCorner.css";
-@import "modules/dat.gui.css";
+
