@@ -88,6 +88,22 @@ export class CameraOperator implements IInputReceiver, IUpdatable
 		this.phi = Math.min(85, Math.max(-85, this.phi));
 	}
 
+	/**
+	 * Outward look direction implied by `theta`/`phi` (unit vector). This is the
+	 * direction an orbit camera looks toward its target, and the direction a
+	 * first-person camera looks from the eye. Writes into `target` if provided.
+	 */
+	public getForward(target?: THREE.Vector3): THREE.Vector3
+	{
+		const t = this.theta * Math.PI / 180;
+		const p = this.phi * Math.PI / 180;
+		return (target ?? new THREE.Vector3()).set(
+			-Math.sin(t) * Math.cos(p),
+			-Math.sin(p),
+			-Math.cos(t) * Math.cos(p)
+		);
+	}
+
 	/** Swap the active camera mode, firing exit/enter hooks. */
 	public setMode(mode: ICameraMode): void
 	{
@@ -156,6 +172,7 @@ export class CameraOperator implements IInputReceiver, IUpdatable
 	{
 		this.target.copy(this.camera.position);
 		this.setRadius(0, true);
+		this.setMode(new OrbitCameraMode()); // free-fly relies on orbit-at-zero-radius
 		// this.world.dirLight.target = this.world.camera;
 
 		this.world.updateControls([

@@ -50,6 +50,7 @@ export { LoadingManager } from './engine/LoadingManager';
 export type { ICameraMode } from './engine/camera/ICameraMode';
 export { OrbitCameraMode } from './engine/camera/OrbitCameraMode';
 export { FollowCameraMode } from './engine/camera/FollowCameraMode';
+export { FirstPersonCameraMode } from './engine/camera/FirstPersonCameraMode';
 
 // World subsystems
 export { Sky } from './engine/world/Sky';

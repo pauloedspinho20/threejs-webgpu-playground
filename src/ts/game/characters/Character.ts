@@ -6,6 +6,7 @@ import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 import { KeyBinding } from '../../engine/KeyBinding';
 import { OrbitCameraMode } from '../../engine/camera/OrbitCameraMode';
+import { FirstPersonCameraMode } from '../../engine/camera/FirstPersonCameraMode';
 import { VectorSpringSimulator } from '../../engine/physics/spring_simulation/VectorSpringSimulator';
 import { RelativeSpringSimulator } from '../../engine/physics/spring_simulation/RelativeSpringSimulator';
 import { Idle } from './character_states/Idle';
@@ -60,6 +61,11 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	public rotationSimulator: RelativeSpringSimulator;
 	public viewVector: THREE.Vector3;
 	public actions: { [action: string]: KeyBinding };
+
+	/** First-person view: camera at the eye, body hidden, yaw drives the body. */
+	public firstPerson: boolean = false;
+	/** Eye height above the character's origin (physics capsule centre), world units. */
+	public firstPersonEyeHeight: number = 0.6;
 	public characterCapsule: CapsuleCollider;
 	
 	// Ray casting
@@ -286,8 +292,13 @@ export class Character extends THREE.Object3D implements IWorldEntity
 			if (code === 'KeyC' && pressed === true && event.shiftKey === true)
 			{
 				this.resetControls();
+				this.modelContainer.visible = true; // reveal the body while flying
 				this.world.cameraOperator.characterCaller = this;
 				this.world.inputManager.setInputReceiver(this.world.cameraOperator);
+			}
+			else if (code === 'KeyV' && pressed === true)
+			{
+				this.toggleFirstPerson();
 			}
 			else if (code === 'KeyR' && pressed === true && event.shiftKey === true)
 			{
@@ -443,8 +454,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 			return;
 		}
 
-		this.world.cameraOperator.setRadius(1.6, true);
-		this.world.cameraOperator.setMode(new OrbitCameraMode());
+		this.applyViewMode();
 		// this.world.dirLight.target = this;
 
 		this.displayControls();
@@ -470,6 +480,10 @@ export class Character extends THREE.Object3D implements IWorldEntity
 				desc: 'Enter vehicle'
 			},
 			{
+				keys: ['V'],
+				desc: 'Toggle view (1st / 3rd person)'
+			},
+			{
 				keys: ['Shift', '+', 'R'],
 				desc: 'Respawn'
 			},
@@ -486,13 +500,21 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		{
 			this.controlledObject.inputReceiverUpdate(timeStep);
 		}
+		else if (this.firstPerson)
+		{
+			// Camera sits at the eye; the look direction comes from the operator's
+			// yaw/pitch (not from camera->character, which is degenerate here).
+			this.world.cameraOperator.getForward(this.viewVector);
+			this.getWorldPosition(this.world.cameraOperator.target);
+			this.world.cameraOperator.target.y += this.firstPersonEyeHeight;
+		}
 		else
 		{
 			// Look in camera's direction
 			this.viewVector = new THREE.Vector3().subVectors(this.position, this.world.camera.position);
 			this.getWorldPosition(this.world.cameraOperator.target);
 		}
-		
+
 	}
 
 	public setAnimation(clipName: string, fadeIn: number): number
@@ -566,8 +588,17 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	{
 		if (this.vehicleEntryInstance === null)
 		{
+			// First-person: the body always faces where the camera looks (flat
+			// yaw), so movement is relative to the look direction like an FPS.
+			if (this.firstPerson)
+			{
+				const flatLook = new THREE.Vector3(this.viewVector.x, 0, this.viewVector.z).normalize();
+				if (flatLook.lengthSq() > 0) this.setOrientation(flatLook);
+				return;
+			}
+
 			const moveVector = this.getCameraRelativeMovementVector();
-	
+
 			if (moveVector.x === 0 && moveVector.y === 0 && moveVector.z === 0)
 			{
 				this.setOrientation(this.orientation);
@@ -576,6 +607,30 @@ export class Character extends THREE.Object3D implements IWorldEntity
 			{
 				this.setOrientation(moveVector);
 			}
+		}
+	}
+
+	/** Toggle between first-person and third-person views (on-foot only). */
+	public toggleFirstPerson(): void
+	{
+		this.firstPerson = !this.firstPerson;
+		this.applyViewMode();
+	}
+
+	/** Apply camera mode, radius, and body visibility for the current view. */
+	private applyViewMode(): void
+	{
+		if (this.firstPerson)
+		{
+			this.world.cameraOperator.setRadius(0, true);
+			this.world.cameraOperator.setMode(new FirstPersonCameraMode());
+			this.modelContainer.visible = false;
+		}
+		else
+		{
+			this.world.cameraOperator.setRadius(1.6, true);
+			this.world.cameraOperator.setMode(new OrbitCameraMode());
+			this.modelContainer.visible = true;
 		}
 	}
 
