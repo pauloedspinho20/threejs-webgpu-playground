@@ -9,6 +9,7 @@ import type { ResolvedEngineOptions } from './EngineOptions';
 import type { EntityRegistry } from './EntityRegistry';
 import type { SceneLoader } from './SceneLoader';
 import type { Viewmodel } from './Viewmodel';
+import type { AbilityRegistry } from './abilities/AbilityRegistry';
 import type { IUpdatable } from './interfaces/IUpdatable';
 import type { IWorldEntity } from './interfaces/IWorldEntity';
 import type { Sky } from './world/Sky';
@@ -60,6 +61,7 @@ export interface EngineContext
 	readonly entities: EntityRegistry;
 	readonly sceneLoader: SceneLoader;
 	readonly viewmodel: Viewmodel;
+	readonly abilities: AbilityRegistry;
 
 	// State
 	readonly events: Emitter<EngineEvents>;

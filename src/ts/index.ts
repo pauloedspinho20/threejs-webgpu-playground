@@ -57,6 +57,11 @@ export { Sky } from './engine/world/Sky';
 export { Ocean } from './engine/world/Ocean';
 export { Viewmodel } from './engine/Viewmodel';
 
+// Abilities (dual-wield powers; register your own, equip per hand)
+export type { Ability, AbilityCastContext } from './engine/abilities/Ability';
+export { AbilityRegistry } from './engine/abilities/AbilityRegistry';
+export type { AbilityFactory } from './engine/abilities/AbilityRegistry';
+
 // Physics building blocks (for custom scene/collider handlers)
 export { BoxCollider } from './engine/physics/colliders/BoxCollider';
 export { TrimeshCollider } from './engine/physics/colliders/TrimeshCollider';

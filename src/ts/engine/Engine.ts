@@ -28,6 +28,7 @@ import { LoadingManager } from "./LoadingManager";
 import { EntityRegistry } from "./EntityRegistry";
 import { SceneLoader } from "./SceneLoader";
 import { Viewmodel } from "./Viewmodel";
+import { AbilityRegistry } from "./abilities/AbilityRegistry";
 import { IWorldEntity } from "./interfaces/IWorldEntity";
 import { IUpdatable } from "./interfaces/IUpdatable";
 import { CollisionGroups } from "./enums/CollisionGroups";
@@ -80,6 +81,8 @@ export class Engine implements EngineContext {
   public readonly sceneLoader = new SceneLoader();
   /** First-person viewmodel layer (hands / held items). Enable to render it. */
   public readonly viewmodel = new Viewmodel();
+  /** Registry mapping ability id -> factory (consumers register their powers). */
+  public readonly abilities = new AbilityRegistry();
   /** Optional per-frame profiler hook (e.g. a Stats panel), owned by the app. */
   public profiler?: { begin(): void; end(): void };
 
@@ -105,7 +108,7 @@ export class Engine implements EngineContext {
       Shadows: opts.renderer.shadows,
       FXAA: opts.postFX.fxaa,
       Debug_Physics: false,
-      Debug_FPS: false,
+      Debug_FPS: true,
       Sun_Elevation: 50,
       Sun_Rotation: 145,
     };

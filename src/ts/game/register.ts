@@ -5,6 +5,7 @@ import { Airplane } from './vehicles/Airplane';
 import { Character } from './characters/Character';
 import { Path } from './world/Path';
 import { Scenario } from './world/Scenario';
+import { MagicBolt } from './abilities/MagicBolt';
 
 /**
  * Registers this demo's content with an engine: the entity kinds its spawn
@@ -19,6 +20,10 @@ export function registerGameContent(engine: Engine): void
 	engine.entities.register('heli', (_ctx, { model }) => new Helicopter(model));
 	engine.entities.register('airplane', (_ctx, { model }) => new Airplane(model));
 	engine.entities.register('player', (_ctx, { model }) => new Character(model));
+
+	// Dual-wield powers: a warm bolt for the right hand, a cool one for the left.
+	engine.abilities.register('fire-bolt', () => new MagicBolt('fire-bolt', 0xff6a2a));
+	engine.abilities.register('frost-bolt', () => new MagicBolt('frost-bolt', 0x4aa3ff));
 
 	// glb authoring conventions specific to this game.
 	engine.sceneLoader.onUserData('data', 'path', ({ node, ctx }) =>

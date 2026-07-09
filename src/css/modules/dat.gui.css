@@ -443,7 +443,7 @@
     position: fixed;
     top: 15px;
     height: 48px;
-    right: 15px;
+    left: 15px;
     opacity: 0.9;
     z-index: 10000;
 }

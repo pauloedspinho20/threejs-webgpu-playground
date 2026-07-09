@@ -26,6 +26,7 @@ export class AppUI {
   private setupStats(): void {
     // Stats() self-appends a #statsBox into #ui-container (hidden by default).
     this.world.profiler = Stats();
+    this.setFPSVisible(this.world.params.Debug_FPS);
   }
 
   private setupGUI(): void {
@@ -76,6 +77,7 @@ export class AppUI {
       this.setFPSVisible(enabled);
     });
 
+    console.log("params", params);
     gui.open();
   }
 
@@ -87,7 +89,9 @@ export class AppUI {
       this.setLoadingVisible(true);
       this.setUIVisible(false);
     });
-    w.events.on("load:progress", ({ fraction }) => this.updateLoadingProgress(fraction));
+    w.events.on("load:progress", ({ fraction }) =>
+      this.updateLoadingProgress(fraction),
+    );
     w.events.on("load:complete", () => {
       this.setLoadingVisible(false);
       this.setUIVisible(true);
@@ -172,8 +176,8 @@ export class AppUI {
   }
 
   private updateLoadingProgress(fraction: number): void {
-    const bar = document.getElementById('loading-bar');
-    const percentage = document.getElementById('loading-percentage');
+    const bar = document.getElementById("loading-bar");
+    const percentage = document.getElementById("loading-percentage");
     const value = Math.round(fraction * 100);
     if (bar !== null) bar.style.width = `${value}%`;
     if (percentage !== null) percentage.innerText = `${value}%`;
@@ -181,6 +185,7 @@ export class AppUI {
 
   private setFPSVisible(visible: boolean): void {
     const stats = document.getElementById("statsBox");
+    console.log("stats", stats);
     if (stats !== null) stats.style.display = visible ? "block" : "none";
   }
 

@@ -7,6 +7,7 @@ import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { KeyBinding } from '../../engine/KeyBinding';
 import { OrbitCameraMode } from '../../engine/camera/OrbitCameraMode';
 import { FirstPersonCameraMode } from '../../engine/camera/FirstPersonCameraMode';
+import type { Ability } from '../../engine/abilities/Ability';
 import { VectorSpringSimulator } from '../../engine/physics/spring_simulation/VectorSpringSimulator';
 import { RelativeSpringSimulator } from '../../engine/physics/spring_simulation/RelativeSpringSimulator';
 import { Idle } from './character_states/Idle';
@@ -67,6 +68,14 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	/** Eye height above the character's origin (physics capsule centre), world units. */
 	public firstPersonEyeHeight: number = 0.6;
 	private viewmodelHandsBuilt: boolean = false;
+
+	/** Dual-wield loadout: an ability per hand, each with its own cooldown timer. */
+	public rightHandAbility?: Ability;
+	public leftHandAbility?: Ability;
+	private rightCooldown: number = 0;
+	private leftCooldown: number = 0;
+	private rightOrb?: THREE.Object3D;
+	private leftOrb?: THREE.Object3D;
 	public characterCapsule: CapsuleCollider;
 	
 	// Ray casting
@@ -127,8 +136,8 @@ export class Character extends THREE.Object3D implements IWorldEntity
 			'enter': new KeyBinding('KeyF'),
 			'enter_passenger': new KeyBinding('KeyG'),
 			'seat_switch': new KeyBinding('KeyX'),
-			'primary': new KeyBinding('Mouse0'),
-			'secondary': new KeyBinding('Mouse1'),
+			'primary': new KeyBinding('mouse0'),
+			'secondary': new KeyBinding('mouse1'),
 		};
 
 		// Physics
@@ -385,6 +394,15 @@ export class Character extends THREE.Object3D implements IWorldEntity
 			if (value) action.justPressed = true;
 			else action.justReleased = true;
 
+			// Cast dual-wield abilities on press (Skyrim mapping: LMB = right
+			// hand, RMB = left hand). Only fires on-foot (in a vehicle these
+			// actions are routed to the controlled object instead).
+			if (value)
+			{
+				if (actionName === 'primary') this.castHand('right');
+				else if (actionName === 'secondary') this.castHand('left');
+			}
+
 			// Tell player to handle states according to new input
 			this.charState.onInputChange();
 
@@ -417,6 +435,9 @@ export class Character extends THREE.Object3D implements IWorldEntity
 
 	public update(timeStep: number): void
 	{
+		if (this.rightCooldown > 0) this.rightCooldown = Math.max(0, this.rightCooldown - timeStep);
+		if (this.leftCooldown > 0) this.leftCooldown = Math.max(0, this.leftCooldown - timeStep);
+
 		this.behaviour?.update(timeStep);
 		this.vehicleEntryInstance?.update(timeStep);
 		// console.log(this.occupyingSeat);
@@ -460,6 +481,10 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		this.applyViewMode();
 		// this.world.dirLight.target = this;
 
+		// Equip default dual-wield powers (if the demo registered them).
+		if (this.rightHandAbility === undefined && this.world.abilities.has('fire-bolt')) this.equip('right', 'fire-bolt');
+		if (this.leftHandAbility === undefined && this.world.abilities.has('frost-bolt')) this.equip('left', 'frost-bolt');
+
 		this.displayControls();
 	}
 
@@ -481,6 +506,10 @@ export class Character extends THREE.Object3D implements IWorldEntity
 			{
 				keys: ['F', 'or', 'G'],
 				desc: 'Enter vehicle'
+			},
+			{
+				keys: ['LMB', 'or', 'RMB'],
+				desc: 'Cast right / left hand'
 			},
 			{
 				keys: ['V'],
@@ -655,6 +684,39 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		};
 		this.world.viewmodel.rightHand.add(makeArm());
 		this.world.viewmodel.leftHand.add(makeArm());
+	}
+
+	/** Equip an ability (by registered id) into the given hand. */
+	public equip(hand: 'left' | 'right', abilityId: string): void
+	{
+		const ability = this.world.abilities.create(abilityId);
+		const socket = hand === 'right' ? this.world.viewmodel.rightHand : this.world.viewmodel.leftHand;
+		const prevOrb = hand === 'right' ? this.rightOrb : this.leftOrb;
+
+		if (prevOrb !== undefined) socket.remove(prevOrb);
+		const orb = ability.createViewmodel?.() ?? undefined;
+		if (orb) socket.add(orb);
+
+		if (hand === 'right') { this.rightHandAbility = ability; this.rightOrb = orb; }
+		else { this.leftHandAbility = ability; this.leftOrb = orb; }
+	}
+
+	/** Cast the ability held in the given hand, if equipped and off cooldown. */
+	private castHand(hand: 'left' | 'right'): void
+	{
+		const ability = hand === 'right' ? this.rightHandAbility : this.leftHandAbility;
+		const cooldown = hand === 'right' ? this.rightCooldown : this.leftCooldown;
+		if (ability === undefined || cooldown > 0) return;
+
+		const origin = new THREE.Vector3();
+		this.getWorldPosition(origin);
+		origin.y += this.firstPersonEyeHeight;
+		const direction = this.world.cameraOperator.getForward();
+
+		ability.cast({ ctx: this.world, origin, direction, hand });
+
+		if (hand === 'right') this.rightCooldown = ability.cooldown;
+		else this.leftCooldown = ability.cooldown;
 	}
 
 	public rotateModel(): void
