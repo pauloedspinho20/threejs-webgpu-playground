@@ -14,11 +14,11 @@ export class Scenario
 	public world: World;
 	public descriptionTitle: string;
 	public descriptionContent: string;
-	
+	public invisible: boolean = false;
+	public initialCameraAngle: number;
+
 	private rootNode: THREE.Object3D;
 	private spawnPoints: ISpawnPoint[] = [];
-	private invisible: boolean = false;
-	private initialCameraAngle: number;
 
 	constructor(root: THREE.Object3D, world: World)
 	{
@@ -55,8 +55,6 @@ export class Scenario
 		{
 			this.initialCameraAngle = root.userData.camera_angle;
 		}
-
-		if (!this.invisible) this.createLaunchLink();
 
 		// Find all scenario spawns and enitites
 		root.traverse((child) => {
@@ -95,27 +93,10 @@ export class Scenario
 		});
 	}
 
-	public createLaunchLink(): void
-	{
-		this.world.params[this.name] = () =>
-		{
-			this.world.launchScenario(this.id);
-		};
-		this.world.scenarioGUIFolder.add(this.world.params, this.name);
-	}
-
 	public launch(loadingManager: LoadingManager, world: World): void
 	{
 		this.spawnPoints.forEach((sp) => {
 			sp.spawn(loadingManager, world);
 		});
-
-		if (!this.spawnAlways)
-		{
-			loadingManager.createWelcomeScreenCallback(this);
-
-			world.cameraOperator.theta = this.initialCameraAngle;
-			world.cameraOperator.phi = 15;
-		}
 	}
 }

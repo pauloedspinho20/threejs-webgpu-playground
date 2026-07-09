@@ -10,7 +10,9 @@ export default defineConfig({
 		alias: [{ find: /^three$/, replacement: 'three/webgpu' }]
 	},
 	server: {
-		port: 8080
+		// Port is env-overridable (defaults to 8080) so tooling can run a second
+		// instance without colliding with a dev server already on 8080.
+		port: Number(process.env.PORT) || 8080
 	},
 	// three/webgpu addons use top-level await, which needs a modern target.
 	esbuild: {

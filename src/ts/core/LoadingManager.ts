@@ -1,15 +1,12 @@
 import { GLTFLoader, GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { LoadingTrackerEntry } from './LoadingTrackerEntry';
-import { UIManager } from './UIManager';
-import { Scenario } from '../world/Scenario';
-import Swal from 'sweetalert2';
 import { World } from '../world/World';
 
 export class LoadingManager
 {
 	public firstLoad: boolean = true;
 	public onFinishedCallback: () => void;
-	
+
 	private world: World;
 	private gltfLoader: GLTFLoader;
 	private loadingTracker: LoadingTrackerEntry[] = [];
@@ -20,8 +17,7 @@ export class LoadingManager
 		this.gltfLoader = new GLTFLoader();
 
 		this.world.setTimeScale(0);
-		UIManager.setUserInterfaceVisible(false);
-		UIManager.setLoadingScreenVisible(true);
+		this.world.events.emit('load:start');
 	}
 
 	public loadGLTF(path: string, onLoadingFinished: (gltf: GLTF) => void): void
@@ -29,19 +25,20 @@ export class LoadingManager
 		const trackerEntry = this.addLoadingEntry(path);
 
 		this.gltfLoader.load(path,
-		(gltf)  =>
+		(gltf) =>
 		{
 			onLoadingFinished(gltf);
 			this.doneLoading(trackerEntry);
 		},
 		(xhr) =>
 		{
-			if ( xhr.lengthComputable )
+			if (xhr.lengthComputable)
 			{
 				trackerEntry.progress = xhr.loaded / xhr.total;
+				this.world.events.emit('load:progress', { fraction: this.getLoadingPercentage() / 100 });
 			}
 		},
-		(error)  =>
+		(error) =>
 		{
 			console.error(error);
 		});
@@ -62,44 +59,17 @@ export class LoadingManager
 
 		if (this.isLoadingDone())
 		{
-			if (this.onFinishedCallback !== undefined) 
+			this.world.events.emit('load:complete');
+
+			if (this.onFinishedCallback !== undefined)
 			{
 				this.onFinishedCallback();
 			}
-			else
-			{
-				UIManager.setUserInterfaceVisible(true);
-			}
-
-			UIManager.setLoadingScreenVisible(false);
-		}
-	}
-
-	public createWelcomeScreenCallback(scenario: Scenario): void
-	{
-		if (this.onFinishedCallback === undefined)
-		{
-			this.onFinishedCallback = () =>
-			{
-				this.world.update(1, 1);
-	
-				Swal.fire({
-					title: scenario.descriptionTitle,
-					html: scenario.descriptionContent,
-					confirmButtonText: 'Play',
-					buttonsStyling: false,
-					onClose: () => {
-						this.world.setTimeScale(1);
-						UIManager.setUserInterfaceVisible(true);
-					}
-				});
-			};
 		}
 	}
 
 	private getLoadingPercentage(): number
 	{
-		let _done = true;
 		let total = 0;
 		let finished = 0;
 
@@ -107,8 +77,6 @@ export class LoadingManager
 		{
 			total++;
 			finished += item.progress;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-			if (!item.finished) _done = false;
 		}
 
 		return (finished / total) * 100;

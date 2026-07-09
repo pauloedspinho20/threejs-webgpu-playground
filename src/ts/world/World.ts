@@ -1,25 +1,20 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import Swal from 'sweetalert2';
-import $ from 'jquery';
 
 import { CameraOperator } from '../core/CameraOperator';
 import { EngineOptions, ResolvedEngineOptions, resolveEngineOptions } from '../core/EngineOptions';
+import { Emitter, EngineEvents, IControlRow, ScenarioInfo } from '../core/EngineEvents';
 import { pass } from 'three/tsl';
 import { fxaa } from 'three/addons/tsl/display/FXAANode.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
 
-import { Stats } from '../../lib/utils/Stats';
-import * as GUI from 'dat.gui';
 import { CannonDebugRenderer } from '../../lib/cannon/CannonDebugRenderer';
 import * as _ from 'lodash';
 
 import { InputManager } from '../core/InputManager';
 import * as Utils from '../core/FunctionLibrary';
 import { LoadingManager } from '../core/LoadingManager';
-import { InfoStack } from '../core/InfoStack';
-import { UIManager } from '../core/UIManager';
 import { IWorldEntity } from '../interfaces/IWorldEntity';
 import { IUpdatable } from '../interfaces/IUpdatable';
 import { Character } from '../characters/Character';
@@ -44,17 +39,13 @@ export interface IWorldParams {
 	Sun_Rotation: number;
 }
 
-export interface IControlRow {
-	keys: string[];
-	desc: string;
-}
+export type { IControlRow } from '../core/EngineEvents';
 
 export class World
 {
 	public renderer: THREE.WebGPURenderer;
 	public camera: THREE.PerspectiveCamera;
 	public postProcessing: THREE.PostProcessing;
-	public stats: Stats;
 	public graphicsWorld: THREE.Scene;
 	public sky: Sky;
 	public physicsWorld: CANNON.World;
@@ -72,15 +63,18 @@ export class World
 	public inputManager: InputManager;
 	public cameraOperator: CameraOperator;
 	public timeScaleTarget: number = 1;
-	public console: InfoStack;
 	public cannonDebugRenderer: CannonDebugRenderer;
 	public scenarios: Scenario[] = [];
 	public characters: Character[] = [];
 	public vehicles: Vehicle[] = [];
 	public paths: Path[] = [];
-	public scenarioGUIFolder: GUI.GUI;
 	public updatables: IUpdatable[] = [];
 	public options: ResolvedEngineOptions;
+
+	/** Event bus. The app layer subscribes to render UI (dialogs, menus, HUD). */
+	public readonly events = new Emitter<EngineEvents>();
+	/** Optional per-frame profiler hook (e.g. a Stats panel), owned by the app. */
+	public profiler?: { begin(): void; end(): void };
 
 	private lastScenarioID: string;
 
@@ -92,18 +86,22 @@ export class World
 		this.options = resolveEngineOptions(options);
 		const opts = this.options;
 
-		// WebGPU not supported (WebGPURenderer still auto-falls back to WebGL2)
-		if (!WebGPU.isAvailable())
-		{
-			Swal.fire({
-				icon: 'warning',
-				title: 'WebGPU compatibility',
-				text: 'This browser doesn\'t support WebGPU. The application will fall back to WebGL2, which may perform differently.',
-				footer: '<a href="https://caniuse.com/webgpu" target="_blank">Click here for more information</a>',
-				showConfirmButton: false,
-				buttonsStyling: false
-			});
-		}
+		// WebGPURenderer still auto-falls back to WebGL2; the app decides how to
+		// surface the warning (deferred to init() so subscribers are attached).
+		const webgpuAvailable = WebGPU.isAvailable();
+
+		// Default engine parameters (mutated live by the app-side debug UI).
+		this.params = {
+			Pointer_Lock: true,
+			Mouse_Sensitivity: 0.3,
+			Time_Scale: opts.timeScale,
+			Shadows: opts.renderer.shadows,
+			FXAA: opts.postFX.fxaa,
+			Debug_Physics: false,
+			Debug_FPS: false,
+			Sun_Elevation: 50,
+			Sun_Rotation: 145,
+		};
 
 		// Renderer
 		this.renderer = new THREE.WebGPURenderer({ antialias: opts.renderer.antialias });
@@ -114,7 +112,9 @@ export class World
 		this.renderer.shadowMap.enabled = opts.renderer.shadows;
 		this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-		this.generateHTML();
+		// Mount the canvas into the configured container.
+		opts.container.appendChild(this.renderer.domElement);
+		this.renderer.domElement.id = 'canvas';
 
 		// Auto window resize
 		function onWindowResize(): void
@@ -153,11 +153,6 @@ export class World
 		this.sinceLastFrame = 0;
 		this.justRendered = false;
 
-		// Stats (FPS, Frame time, Memory)
-		this.stats = Stats();
-		// Create right panel GUI
-		this.createParamsGUI(scope);
-
 		// Initialization
 		this.inputManager = new InputManager(this, this.renderer.domElement);
 		this.cameraOperator = new CameraOperator(this, this.camera, this.params.Mouse_Sensitivity);
@@ -171,17 +166,7 @@ export class World
 			{
 				this.update(1, 1);
 				this.setTimeScale(1);
-
-				Swal.fire({
-					title: 'Welcome to the playground!',
-					text: 'Feel free to explore the world and interact with available vehicles. There are also various scenarios ready to launch from the right panel.',
-					footer: '<a href="https://github.com/pauloedspinho20/threejs-webgpu-playground" target="_blank">GitHub page</a>',
-					confirmButtonText: 'Okay',
-					buttonsStyling: false,
-					onClose: () => {
-						UIManager.setUserInterfaceVisible(true);
-					}
-				});
+				this.events.emit('world:loaded', { scenarios: this.getScenarioInfos() });
 			};
 
 			if (typeof opts.world === 'string')
@@ -196,23 +181,29 @@ export class World
 				this.loadScene(loadingManager, opts.world);
 			}
 		}
-		else
-		{
-			UIManager.setUserInterfaceVisible(true);
-			UIManager.setLoadingScreenVisible(false);
-			Swal.fire({
-				icon: 'success',
-				title: 'Hello world!',
-				text: 'Empty world was succesfully initialized. Enjoy the blueness of the sky.',
-				buttonsStyling: false
-			});
-		}
-
 		// WebGPURenderer needs async initialization before the first render.
+		// Events here are deferred to a microtask so app-side subscribers
+		// (attached right after `new World()`) receive them.
 		this.renderer.init().then(() =>
 		{
+			if (!webgpuAvailable) this.events.emit('webgpu:unsupported');
+			this.events.emit('ready');
+			if (opts.world === null) this.events.emit('world:empty');
 			this.render(this);
 		});
+	}
+
+	/** Snapshot of scenarios for building an app-side menu. */
+	public getScenarioInfos(): ScenarioInfo[]
+	{
+		return this.scenarios.map((s) => ({
+			id: s.id,
+			name: s.name,
+			invisible: s.invisible,
+			welcome: s.descriptionTitle !== undefined
+				? { title: s.descriptionTitle, content: s.descriptionContent }
+				: undefined
+		}));
 	}
 
 	// Update
@@ -332,13 +323,19 @@ export class World
 		this.sinceLastFrame += this.requestDelta + this.renderDelta + this.logicDelta;
 		this.sinceLastFrame %= interval;
 
-		// Stats end
-		this.stats.end();
-		this.stats.begin();
+		// Profiler (e.g. Stats panel, owned by the app)
+		this.profiler?.end();
+		this.profiler?.begin();
 
-		// Actual rendering with a FXAA ON/OFF switch
-		if (this.params.FXAA) this.postProcessing.render();
-		else this.renderer.render(this.graphicsWorld, this.camera);
+		// Actual rendering with a FXAA ON/OFF switch. Skip while the canvas has
+		// no size yet (e.g. an embed/iframe before first layout) to avoid
+		// zero-size swapchain/depth-buffer errors; the loop recovers on resize.
+		const canvas = this.renderer.domElement;
+		if (canvas.width > 0 && canvas.height > 0)
+		{
+			if (this.params.FXAA) this.postProcessing.render();
+			else this.renderer.render(this.graphicsWorld, this.camera);
+		}
 
 		// Measuring render time
 		this.renderDelta = this.clock.getDelta();
@@ -463,12 +460,35 @@ export class World
 
 		this.clearEntities();
 
-		// Launch default scenario
 		if (!loadingManager) loadingManager = new LoadingManager(this);
+
+		let launched: Scenario | undefined;
 		for (const scenario of this.scenarios) {
 			if (scenario.id === scenarioID || scenario.spawnAlways) {
 				scenario.launch(loadingManager, this);
+				if (scenario.id === scenarioID) launched = scenario;
 			}
+		}
+
+		// Point the camera at the launched scenario's initial angle.
+		if (launched !== undefined && !launched.spawnAlways && launched.initialCameraAngle !== undefined)
+		{
+			this.cameraOperator.theta = launched.initialCameraAngle;
+			this.cameraOperator.phi = 15;
+		}
+
+		// Announce completion once all scenario assets finish loading. Guarded so
+		// the initial world-load welcome (set in the constructor) is not clobbered.
+		if (loadingManager.onFinishedCallback === undefined)
+		{
+			const welcome = (launched !== undefined && !launched.spawnAlways && launched.descriptionTitle !== undefined)
+				? { title: launched.descriptionTitle, content: launched.descriptionContent }
+				: undefined;
+			loadingManager.onFinishedCallback = () =>
+			{
+				this.setTimeScale(1);
+				this.events.emit('scenario:launched', { id: scenarioID, welcome });
+			};
 		}
 	}
 
@@ -517,150 +537,28 @@ export class World
 		}
 	}
 
+	/** Broadcast the current control hints; the app renders them into the HUD. */
 	public updateControls(controls: IControlRow[]): void
 	{
-		let html = '';
-		html += '<h2 class="controls-title">Controls:</h2>';
+		this.events.emit('controls:changed', controls);
+	}
 
-		controls.forEach((row) =>
+	/** Toggle the cannon-es physics debug wireframes (and character raycast boxes). */
+	public setDebugPhysics(enabled: boolean): void
+	{
+		if (enabled)
 		{
-			html += '<div class="ctrl-row">';
-			row.keys.forEach((key) => {
-				if (key === '+' || key === 'and' || key === 'or' || key === '&') html += '&nbsp;' + key + '&nbsp;';
-				else html += '<span class="ctrl-key">' + key + '</span>';
-			});
+			this.cannonDebugRenderer = new CannonDebugRenderer(this.graphicsWorld, this.physicsWorld);
+		}
+		else if (this.cannonDebugRenderer !== undefined)
+		{
+			this.cannonDebugRenderer.clearMeshes();
+			this.cannonDebugRenderer = undefined;
+		}
 
-			html += '<span class="ctrl-desc">' + row.desc + '</span></div>';
+		this.characters.forEach((char) =>
+		{
+			char.raycastBox.visible = enabled;
 		});
-
-		document.getElementById('controls').innerHTML = html;
-	}
-
-	private generateHTML(): void
-	{
-		// Fonts
-		$('head').append('<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&display=swap" rel="stylesheet">');
-		$('head').append('<link href="https://fonts.googleapis.com/css2?family=Solway:wght@400;500;700&display=swap" rel="stylesheet">');
-		$('head').append('<link href="https://fonts.googleapis.com/css2?family=Cutive+Mono&display=swap" rel="stylesheet">');
-
-		// Loader
-		$(`	<div id="loading-screen">
-				<div id="loading-screen-background"></div>
-				<h1 id="main-title" class="sb-font">threejs-webgpu-playground</h1>
-				<div class="cubeWrap">
-					<div class="cube">
-						<div class="faces1"></div>
-						<div class="faces2"></div>     
-					</div> 
-				</div> 
-				<div id="loading-text">Loading...</div>
-			</div>
-		`).appendTo('body');
-
-		// UI
-		$(`	<div id="ui-container" style="display: none;">
-				<div class="github-corner">
-					<a href="https://github.com/pauloedspinho20/threejs-webgpu-playground" target="_blank" title="Fork me on GitHub">
-						<svg viewbox="0 0 100 100" fill="currentColor">
-							<title>Fork me on GitHub</title>
-							<path d="M0 0v100h100V0H0zm60 70.2h.2c1 2.7.3 4.7 0 5.2 1.4 1.4 2 3 2 5.2 0 7.4-4.4 9-8.7 9.5.7.7 1.3 2
-							1.3 3.7V99c0 .5 1.4 1 1.4 1H44s1.2-.5 1.2-1v-3.8c-3.5 1.4-5.2-.8-5.2-.8-1.5-2-3-2-3-2-2-.5-.2-1-.2-1
-							2-.7 3.5.8 3.5.8 2 1.7 4 1 5 .3.2-1.2.7-2 1.2-2.4-4.3-.4-8.8-2-8.8-9.4 0-2 .7-4 2-5.2-.2-.5-1-2.5.2-5
-							0 0 1.5-.6 5.2 1.8 1.5-.4 3.2-.6 4.8-.6 1.6 0 3.3.2 4.8.7 2.8-2 4.4-2 5-2z"></path>
-						</svg>
-					</a>
-				</div>
-				<div class="left-panel">
-					<div id="controls" class="panel-segment flex-bottom"></div>
-				</div>
-			</div>
-		`).appendTo('body');
-
-		// Canvas
-		this.options.container.appendChild(this.renderer.domElement);
-		this.renderer.domElement.id = 'canvas';
-	}
-
-	private createParamsGUI(scope: World): void
-	{
-		this.params = {
-			Pointer_Lock: true,
-			Mouse_Sensitivity: 0.3,
-			Time_Scale: this.options.timeScale,
-			Shadows: this.options.renderer.shadows,
-			FXAA: this.options.postFX.fxaa,
-			Debug_Physics: false,
-			Debug_FPS: false,
-			Sun_Elevation: 50,
-			Sun_Rotation: 145,
-		};
-
-		const gui = new GUI.GUI();
-
-		// Scenario
-		this.scenarioGUIFolder = gui.addFolder('Scenarios');
-		this.scenarioGUIFolder.open();
-
-		// World
-		const worldFolder = gui.addFolder('World');
-		worldFolder.add(this.params, 'Time_Scale', 0, 1).listen()
-			.onChange((value) =>
-			{
-				scope.timeScaleTarget = value;
-			});
-		worldFolder.add(this.params, 'Sun_Elevation', 0, 180).listen()
-			.onChange((value) =>
-			{
-				scope.sky.phi = value;
-			});
-		worldFolder.add(this.params, 'Sun_Rotation', 0, 360).listen()
-			.onChange((value) =>
-			{
-				scope.sky.theta = value;
-			});
-
-		// Input
-		const settingsFolder = gui.addFolder('Settings');
-		settingsFolder.add(this.params, 'FXAA');
-		settingsFolder.add(this.params, 'Shadows')
-			.onChange((enabled) =>
-			{
-				this.sky.sunLight.castShadow = enabled;
-			});
-		settingsFolder.add(this.params, 'Pointer_Lock')
-			.onChange((enabled) =>
-			{
-				scope.inputManager.setPointerLock(enabled);
-			});
-		settingsFolder.add(this.params, 'Mouse_Sensitivity', 0, 1)
-			.onChange((value) =>
-			{
-				scope.cameraOperator.setSensitivity(value, value * 0.8);
-			});
-		settingsFolder.add(this.params, 'Debug_Physics')
-			.onChange((enabled) =>
-			{
-				if (enabled)
-				{
-					this.cannonDebugRenderer = new CannonDebugRenderer( this.graphicsWorld, this.physicsWorld );
-				}
-				else
-				{
-					this.cannonDebugRenderer.clearMeshes();
-					this.cannonDebugRenderer = undefined;
-				}
-
-				scope.characters.forEach((char) =>
-				{
-					char.raycastBox.visible = enabled;
-				});
-			});
-		settingsFolder.add(this.params, 'Debug_FPS')
-			.onChange((enabled) =>
-			{
-				UIManager.setFPSVisible(enabled);
-			});
-
-		gui.open();
 	}
 }
