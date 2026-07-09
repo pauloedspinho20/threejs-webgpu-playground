@@ -32,6 +32,28 @@ documented it. What's left is the starter world and load-time validation.
 - [ ] **Validate on load with actionable errors** ("object X marked `physics` but missing `type`") instead of silently skipping malformed objects.
 - [x] **Map the module layout** — [`docs/architecture.md`](docs/architecture.md) covers the three-layer model, data flow, extension points, and events. *(A root `CLAUDE.md` is still worth adding for contributors.)*
 
+## Milestone: First-person POV, viewmodel & abilities (current focus)
+
+**Vision:** support first-person shooter cameras and a Skyrim-style dual-wield
+where each hand holds an independent weapon/spell/torch. This is now the primary
+direction. Today [`CameraOperator`](src/ts/engine/CameraOperator.ts) is a single
+orbit rig (`target` + `radius` + `theta`/`phi`) with no mode abstraction — that
+abstraction is the missing primitive. Build in independently-shippable layers:
+
+- [ ] **A1 · Camera-mode strategy (foundation).** Refactor `CameraOperator` to host swappable `ICameraMode` strategies (`enter`/`exit`/`update`, each mapping target + input → camera pose). Port the existing third-person and free-cam into modes with **zero behavior change** (pure refactor, verifiable against the current demo). Lives in `engine/` (generic). Enables everything below.
+- [ ] **A2 · First-person mode.** (1) **Eye anchor** — target follows a head bone / configurable eye-height offset, not the body center. (2) **Yaw coupling** — mouse yaw drives `character.orientation` directly (body turns with the look); pitch stays on the camera and can drive spine/neck bones for visible aim. (3) **Hide own body** at `radius → 0` so the mesh doesn't occlude the lens.
+- [ ] **A3 · Viewmodel pass (the "hands").** Render arms + held items in a second pass with a dedicated ~55° camera and cleared depth, composited over the world so hands never clip into walls. Add `leftHand` / `rightHand` sockets anchored to the view camera.
+- [ ] **A4 · Ability / equip system (dual-wield powers).** `Equippable` (mesh + behavior) and `Ability`/`Spell` (cast, cooldown, cost, VFX hook) registered through the existing plugin registries. Skyrim mapping: **RMB → right hand, LMB → left hand**, each independently equippable with a weapon, spell, or torch. Spell VFX is the natural home for TSL compute particles (see Milestone 4).
+- [ ] **A5 · Over-the-shoulder / aim mode + transitions.** Offset + short-radius aim mode, plus smooth lerped transitions between FP ↔ shoulder ↔ third-person, cycled with a key.
+
+**Supporting work this milestone needs (elevated from later milestones):**
+
+- [ ] **Input action-map + rebinding + gamepad.** `KeyBinding` is hardcoded per input receiver; an action-map layer is a prerequisite for a controls menu, gamepad support, and clean per-mode bindings.
+- [ ] **Combat / interaction core.** Health + damage, hit detection (raycast / physics query), and interactables (pickups, doors, levers) — the scaffolding abilities and weapons act on.
+- [ ] **TSL compute particles** (also in Milestone 4) — spell and impact VFX, and the actual payoff of the WebGPU migration.
+
+> ✅ **Fixed along the way:** cascaded sun shadows were capped at 250u (`maxFar`) while the camera sees to ~1010u, so shadows faded out mid-view. Now 800u / 4 cascades by default and configurable via `renderer.shadowDistance` / `renderer.shadowCascades`.
+
 ## Milestone 2 — Engine maturity & credibility
 
 - [x] **Extract a clean core vs. game layer.** Done: `engine/` is a generic core (renderer, sky/ocean, scene loader, camera, physics, post-processing) with **zero runtime dependency** on `game/`. Characters + vehicles are content in `game/`, registered onto the engine via the `EntityRegistry` / `SceneLoader` plugin registries — build a non-vehicle game by shipping a different `register`.
