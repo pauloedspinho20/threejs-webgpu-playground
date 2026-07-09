@@ -46,6 +46,11 @@ export { InputManager } from './engine/InputManager';
 export { CameraOperator } from './engine/CameraOperator';
 export { LoadingManager } from './engine/LoadingManager';
 
+// Camera modes (swap via cameraOperator.setMode(); register your own)
+export type { ICameraMode } from './engine/camera/ICameraMode';
+export { OrbitCameraMode } from './engine/camera/OrbitCameraMode';
+export { FollowCameraMode } from './engine/camera/FollowCameraMode';
+
 // World subsystems
 export { Sky } from './engine/world/Sky';
 export { Ocean } from './engine/world/Ocean';

@@ -5,6 +5,7 @@ import * as Utils from '../../engine/FunctionLibrary';
 import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 import { KeyBinding } from '../../engine/KeyBinding';
+import { OrbitCameraMode } from '../../engine/camera/OrbitCameraMode';
 import { VectorSpringSimulator } from '../../engine/physics/spring_simulation/VectorSpringSimulator';
 import { RelativeSpringSimulator } from '../../engine/physics/spring_simulation/RelativeSpringSimulator';
 import { Idle } from './character_states/Idle';
@@ -443,7 +444,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		}
 
 		this.world.cameraOperator.setRadius(1.6, true);
-		this.world.cameraOperator.followMode = false;
+		this.world.cameraOperator.setMode(new OrbitCameraMode());
 		// this.world.dirLight.target = this;
 
 		this.displayControls();

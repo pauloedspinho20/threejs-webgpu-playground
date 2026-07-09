@@ -6,6 +6,8 @@ import { KeyBinding } from './KeyBinding';
 import type { Character } from '../game/characters/Character';
 import * as _ from 'lodash';
 import { IUpdatable } from './interfaces/IUpdatable';
+import type { ICameraMode } from './camera/ICameraMode';
+import { OrbitCameraMode } from './camera/OrbitCameraMode';
 
 export class CameraOperator implements IInputReceiver, IUpdatable
 {
@@ -30,7 +32,8 @@ export class CameraOperator implements IInputReceiver, IUpdatable
 	public forwardVelocity: number = 0;
 	public rightVelocity: number = 0;
 
-	public followMode: boolean = false;
+	/** Active view strategy. Swap via `setMode()`. Defaults to orbit (third-person). */
+	public mode: ICameraMode = new OrbitCameraMode();
 
 	public characterCaller: Character;
 
@@ -85,28 +88,18 @@ export class CameraOperator implements IInputReceiver, IUpdatable
 		this.phi = Math.min(85, Math.max(-85, this.phi));
 	}
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	public update(_timeScale: number): void
+	/** Swap the active camera mode, firing exit/enter hooks. */
+	public setMode(mode: ICameraMode): void
 	{
-		if (this.followMode === true)
-		{
-			this.camera.position.y = THREE.MathUtils.clamp(this.camera.position.y, this.target.y, Number.POSITIVE_INFINITY);
-			this.camera.lookAt(this.target);
-			const newPos = this.target.clone().add(new THREE.Vector3().subVectors(this.camera.position, this.target).normalize().multiplyScalar(this.targetRadius));
-			this.camera.position.x = newPos.x;
-			this.camera.position.y = newPos.y;
-			this.camera.position.z = newPos.z;
-		}
-		else 
-		{
-			this.radius = THREE.MathUtils.lerp(this.radius, this.targetRadius, 0.1);
-	
-			this.camera.position.x = this.target.x + this.radius * Math.sin(this.theta * Math.PI / 180) * Math.cos(this.phi * Math.PI / 180);
-			this.camera.position.y = this.target.y + this.radius * Math.sin(this.phi * Math.PI / 180);
-			this.camera.position.z = this.target.z + this.radius * Math.cos(this.theta * Math.PI / 180) * Math.cos(this.phi * Math.PI / 180);
-			this.camera.updateMatrix();
-			this.camera.lookAt(this.target);
-		}
+		if (mode === this.mode) return;
+		this.mode.exit?.(this);
+		this.mode = mode;
+		this.mode.enter?.(this);
+	}
+
+	public update(timeScale: number): void
+	{
+		this.mode.update(this, timeScale);
 	}
 
 	public handleKeyboardEvent(event: KeyboardEvent, code: string, pressed: boolean): void
