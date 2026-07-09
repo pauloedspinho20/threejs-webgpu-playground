@@ -60,12 +60,17 @@ export class Sky extends THREE.Object3D implements IUpdatable
 		this.hemiLight.position.set( 0, 50, 0 );
 		this.world.graphicsWorld.add( this.hemiLight );
 
+		// Shadow coverage is configurable — the previous fixed 250u cap made
+		// shadows fade out well within the camera's view distance.
+		const shadowDistance = this.world.options.renderer.shadowDistance;
+		const shadowCascades = this.world.options.renderer.shadowCascades;
+
 		// Sun (directional light). Its direction (position -> target) drives CSM.
 		this.sunLight = new THREE.DirectionalLight( 0xffffff, 3.0 );
 		this.sunLight.castShadow = true;
 		this.sunLight.shadow.mapSize.setScalar( 2048 );
 		this.sunLight.shadow.camera.near = 0.5;
-		this.sunLight.shadow.camera.far = 250;
+		this.sunLight.shadow.camera.far = shadowDistance;
 		this.world.graphicsWorld.add( this.sunLight );
 		this.world.graphicsWorld.add( this.sunLight.target );
 
@@ -81,8 +86,8 @@ export class Sky extends THREE.Object3D implements IUpdatable
 		};
 
 		this.csm = new CSMShadowNode(this.sunLight, {
-			maxFar: 250,
-			cascades: 3,
+			maxFar: shadowDistance,
+			cascades: shadowCascades,
 			mode: 'custom',
 			customSplitsCallback: splitsCallback
 		});

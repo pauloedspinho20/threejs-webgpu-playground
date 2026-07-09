@@ -34,6 +34,10 @@ export interface EngineOptions
 		antialias?: boolean;
 		pixelRatio?: number;
 		shadows?: boolean;
+		/** Distance (world units) the cascaded sun shadows cover. Default 800. */
+		shadowDistance?: number;
+		/** Number of shadow cascades. More = crisper shadows over the distance. Default 4. */
+		shadowCascades?: number;
 		toneMapping?: THREE.ToneMapping;
 		toneMappingExposure?: number;
 	};
@@ -85,6 +89,8 @@ export interface ResolvedEngineOptions
 		antialias: boolean;
 		pixelRatio: number;
 		shadows: boolean;
+		shadowDistance: number;
+		shadowCascades: number;
 		toneMapping: THREE.ToneMapping;
 		toneMappingExposure: number;
 	};
@@ -127,6 +133,8 @@ export function resolveEngineOptions(options: EngineOptions = {}): ResolvedEngin
 			antialias: options.renderer?.antialias ?? false,
 			pixelRatio: options.renderer?.pixelRatio ?? window.devicePixelRatio,
 			shadows: options.renderer?.shadows ?? true,
+			shadowDistance: options.renderer?.shadowDistance ?? 800,
+			shadowCascades: options.renderer?.shadowCascades ?? 4,
 			toneMapping: options.renderer?.toneMapping ?? THREE.ACESFilmicToneMapping,
 			toneMappingExposure: options.renderer?.toneMappingExposure ?? 1.0
 		},
