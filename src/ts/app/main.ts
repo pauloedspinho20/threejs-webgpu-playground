@@ -1,5 +1,5 @@
 import '../../css/main.css';
-import { createEngine } from '../engine/Engine';
+import { createEngine } from '../index';
 import { registerGameContent } from '../game/register';
 import { AppUI } from './AppUI';
 

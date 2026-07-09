@@ -1,4 +1,4 @@
-import type { Engine } from '../engine/Engine';
+import type { Engine } from '../index';
 import { Car } from './vehicles/Car';
 import { Helicopter } from './vehicles/Helicopter';
 import { Airplane } from './vehicles/Airplane';
