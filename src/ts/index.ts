@@ -55,6 +55,7 @@ export { FirstPersonCameraMode } from './engine/camera/FirstPersonCameraMode';
 // World subsystems
 export { Sky } from './engine/world/Sky';
 export { Ocean } from './engine/world/Ocean';
+export { Viewmodel } from './engine/Viewmodel';
 
 // Physics building blocks (for custom scene/collider handlers)
 export { BoxCollider } from './engine/physics/colliders/BoxCollider';

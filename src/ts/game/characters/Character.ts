@@ -66,6 +66,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	public firstPerson: boolean = false;
 	/** Eye height above the character's origin (physics capsule centre), world units. */
 	public firstPersonEyeHeight: number = 0.6;
+	private viewmodelHandsBuilt: boolean = false;
 	public characterCapsule: CapsuleCollider;
 	
 	// Ray casting
@@ -293,6 +294,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 			{
 				this.resetControls();
 				this.modelContainer.visible = true; // reveal the body while flying
+				this.world.viewmodel.enabled = false; // no hands in free camera
 				this.world.cameraOperator.characterCaller = this;
 				this.world.inputManager.setInputReceiver(this.world.cameraOperator);
 			}
@@ -450,6 +452,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	{
 		if (this.controlledObject !== undefined)
 		{
+			this.world.viewmodel.enabled = false; // no hands while controlling a vehicle
 			this.controlledObject.inputReceiverInit();
 			return;
 		}
@@ -617,7 +620,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		this.applyViewMode();
 	}
 
-	/** Apply camera mode, radius, and body visibility for the current view. */
+	/** Apply camera mode, radius, body visibility, and viewmodel for the current view. */
 	private applyViewMode(): void
 	{
 		if (this.firstPerson)
@@ -625,13 +628,33 @@ export class Character extends THREE.Object3D implements IWorldEntity
 			this.world.cameraOperator.setRadius(0, true);
 			this.world.cameraOperator.setMode(new FirstPersonCameraMode());
 			this.modelContainer.visible = false;
+			this.buildViewmodelHands();
+			this.world.viewmodel.enabled = true;
 		}
 		else
 		{
 			this.world.cameraOperator.setRadius(1.6, true);
 			this.world.cameraOperator.setMode(new OrbitCameraMode());
 			this.modelContainer.visible = true;
+			this.world.viewmodel.enabled = false;
 		}
+	}
+
+	/** Lazily populate the first-person hand sockets (placeholder arms; A4 replaces these). */
+	private buildViewmodelHands(): void
+	{
+		if (this.viewmodelHandsBuilt) return;
+		this.viewmodelHandsBuilt = true;
+
+		const material = new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.85 });
+		const makeArm = (): THREE.Mesh =>
+		{
+			const arm = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.45), material);
+			arm.position.z = -0.22; // extend forward from the socket toward the view
+			return arm;
+		};
+		this.world.viewmodel.rightHand.add(makeArm());
+		this.world.viewmodel.leftHand.add(makeArm());
 	}
 
 	public rotateModel(): void

@@ -27,6 +27,7 @@ import * as Utils from "./FunctionLibrary";
 import { LoadingManager } from "./LoadingManager";
 import { EntityRegistry } from "./EntityRegistry";
 import { SceneLoader } from "./SceneLoader";
+import { Viewmodel } from "./Viewmodel";
 import { IWorldEntity } from "./interfaces/IWorldEntity";
 import { IUpdatable } from "./interfaces/IUpdatable";
 import { CollisionGroups } from "./enums/CollisionGroups";
@@ -77,6 +78,8 @@ export class Engine implements EngineContext {
   public readonly entities = new EntityRegistry();
   /** Registry of glb userData/material handlers (consumers register conventions). */
   public readonly sceneLoader = new SceneLoader();
+  /** First-person viewmodel layer (hands / held items). Enable to render it. */
+  public readonly viewmodel = new Viewmodel();
   /** Optional per-frame profiler hook (e.g. a Stats panel), owned by the app. */
   public profiler?: { begin(): void; end(): void };
 
@@ -221,6 +224,7 @@ export class Engine implements EngineContext {
 
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
+    this.viewmodel.setAspect(width / height);
     this.renderer.setSize(width, height);
   }
 
@@ -412,8 +416,17 @@ export class Engine implements EngineContext {
     // zero-size swapchain/depth-buffer errors; the loop recovers on resize.
     const canvas = this.renderer.domElement;
     if (canvas.width > 0 && canvas.height > 0) {
-      if (this.params.FXAA) this.postProcessing.render();
-      else this.renderer.render(this.graphicsWorld, this.camera);
+      if (this.viewmodel.enabled) {
+        // The viewmodel needs a forward overlay pass, which the node-based
+        // PostProcessing output can't be composited with cleanly, so the
+        // first-person view renders directly (no FXAA) + the overlay on top.
+        this.renderer.render(this.graphicsWorld, this.camera);
+        this.viewmodel.render(this.renderer);
+      } else if (this.params.FXAA) {
+        this.postProcessing.render();
+      } else {
+        this.renderer.render(this.graphicsWorld, this.camera);
+      }
     }
 
     // Measuring render time

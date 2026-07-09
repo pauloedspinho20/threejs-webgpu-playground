@@ -8,6 +8,7 @@ import type { Emitter, EngineEvents, IControlRow } from './EngineEvents';
 import type { ResolvedEngineOptions } from './EngineOptions';
 import type { EntityRegistry } from './EntityRegistry';
 import type { SceneLoader } from './SceneLoader';
+import type { Viewmodel } from './Viewmodel';
 import type { IUpdatable } from './interfaces/IUpdatable';
 import type { IWorldEntity } from './interfaces/IWorldEntity';
 import type { Sky } from './world/Sky';
@@ -58,6 +59,7 @@ export interface EngineContext
 	// Plugin registries
 	readonly entities: EntityRegistry;
 	readonly sceneLoader: SceneLoader;
+	readonly viewmodel: Viewmodel;
 
 	// State
 	readonly events: Emitter<EngineEvents>;
