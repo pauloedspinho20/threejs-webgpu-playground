@@ -32,14 +32,45 @@ All planned features can be found in the [GitHub Projects](https://github.com/sw
 
 > **This fork** has been migrated from WebGL to **three.js WebGPU (`WebGPURenderer`)** with shaders rewritten in **TSL** (Three.js Shading Language). It runs on the WebGPU backend where available and automatically falls back to WebGL2 otherwise. The toolchain is **Vite + TypeScript**, physics uses **cannon-es**, and three.js is on r185+.
 
+## Architecture
+
+The source is split into three layers with a one-directional dependency rule
+(`app` → `game` → `engine`); the engine ships **no** game content and has zero
+runtime dependency on it. See [docs/architecture.md](docs/architecture.md).
+
+- **`src/ts/engine/`** — the generic framework: renderer, physics, camera,
+  input, loading, sky/ocean, and the plugin registries.
+- **`src/ts/game/`** — this demo's content: characters, vehicles, scenarios,
+  paths, spawn points.
+- **`src/ts/app/`** — the host: canvas mount, debug GUI, dialogs, HUD.
+
 ## Usage
 
-Scenes are authored in Blender and loaded as `.glb`. The app is bootstrapped in [`src/ts/main.ts`](src/ts/main.ts):
+Construct an engine, register your content, and point it at a Blender-authored
+`.glb`. The demo is bootstrapped in [`src/ts/app/main.ts`](src/ts/app/main.ts):
 
-```javascript
-import { World } from './world/World';
-new World('/assets/world.glb');
+```ts
+import { createEngine } from 'threejs-webgpu-playground';
+import { registerGameContent } from './game/register';
+
+const engine = createEngine({ world: '/assets/world.glb', assetBaseUrl: '/assets/' });
+registerGameContent(engine); // entity kinds + glb conventions — before load
 ```
+
+Add your own entity types and glb conventions through the public registries —
+no engine edits needed:
+
+```ts
+engine.entities.register('drone', (ctx, { model }) => new Drone(model));
+engine.sceneLoader.onUserData('data', 'light', ({ node, ctx }) => { /* … */ });
+```
+
+`createEngine(options)` is fully configurable (container, camera, renderer,
+physics, post-FX, world bounds, …); every field has a sensible default. React
+to lifecycle via the typed event bus (`engine.events.on('world:loaded', …)`).
+
+- **World authoring** (the Blender `userData` contract): [docs/authoring.md](docs/authoring.md)
+- **Architecture & extension points**: [docs/architecture.md](docs/architecture.md)
 
 ## Running locally
 

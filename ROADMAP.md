@@ -14,28 +14,28 @@ This is a living document. Items are ordered by priority within each milestone. 
 - ✅ cannon-es physics: character capsule, `RaycastVehicle` cars, colliders
 - ✅ Third-person character controller + drivable cars, airplanes, helicopters
 - ✅ Blender → glb world loading with `userData`-driven entities
-- ✅ Vite + TypeScript toolchain, `tsc --noEmit` clean
+- ✅ Layered `engine` / `game` / `app` architecture with a `createEngine(options)` public API and plugin registries (engine has zero runtime dependency on game content) — see [docs/architecture.md](docs/architecture.md)
+- ✅ Vite + TypeScript toolchain, `tsc --noEmit` clean, eslint clean
 
 ---
 
 ## Milestone 1 — Make it buildable *by other people* (highest priority)
 
-The authoring contract is currently implicit in [`World.loadScene`](src/ts/world/World.ts). Nobody can build a world without reading the source. This milestone is the difference between "a demo" and "a template."
+**Largely complete.** A refactor split the source into `engine` / `game` / `app`
+layers, replaced `new World(path)` with a configurable `createEngine(options)`
+public API, moved the glb-authoring contract into pluggable registries, and
+documented it. What's left is the starter world and load-time validation.
 
-- [ ] **Document the world-authoring contract.** A `docs/authoring.md` specifying the Blender conventions the loader recognizes:
-  - `userData.data = 'physics'` + `userData.type = 'box' | 'trimesh'` → collider (note the current `box`/`trimesh`-only limitation; convex is unsupported)
-  - `userData.data = 'path'` → AI path; `userData.data = 'scenario'` → spawn scenario
-  - material named `ocean` → water surface
-  - scale/unit expectations, axis orientation, naming rules
+- [x] **Document the world-authoring contract** — [`docs/authoring.md`](docs/authoring.md) specifies the Blender `userData` conventions (physics box/trimesh, path, scenario + spawn points, `ocean` material) and the export checklist.
 - [ ] **Ship a minimal starter world** (`empty-world.glb` + source `.blend`) plus a documented `tools/` export workflow, so a creator has a working example to copy.
-- [ ] **De-hardcode the entry point.** [`main.ts`](src/ts/main.ts) hardwires `/assets/world.glb`. Make the world path config-driven (query param / config file) and expose a small `createWorld(options)` API instead of `new World(path)` doing everything.
+- [x] **De-hardcode the entry point** — `createEngine(options)` (see [`EngineOptions`](src/ts/engine/EngineOptions.ts)) replaces `new World(path)`; the world path, container, and all subsystem settings are config-driven with defaults. Content is registered via `engine.entities` / `engine.sceneLoader` (see [`game/register.ts`](src/ts/game/register.ts)), not hardcoded in the engine.
 - [ ] **Validate on load with actionable errors** ("object X marked `physics` but missing `type`") instead of silently skipping malformed objects.
-- [ ] Add `CLAUDE.md` / `docs/architecture.md` mapping the module layout (core / world / characters / vehicles / physics).
+- [x] **Map the module layout** — [`docs/architecture.md`](docs/architecture.md) covers the three-layer model, data flow, extension points, and events. *(A root `CLAUDE.md` is still worth adding for contributors.)*
 
 ## Milestone 2 — Engine maturity & credibility
 
-- [ ] **Extract a clean core vs. game layer.** Keep character + vehicles as the showcase, but make them opt-in modules on top of a core (renderer, sky, world loader, camera, physics, post-processing) so people can build non-vehicle games.
-- [ ] **Tighten types.** Add a tsconfig `paths` alias `three` → `three/webgpu` (mirroring the Vite alias) so `WebGPURenderer`, `PostProcessing`, and node materials are typed — removing the `as any` casts in [`World.ts`](src/ts/world/World.ts) and [`Ocean.ts`](src/ts/world/Ocean.ts). Replace private-member casts (`getVehicleAxisWorld`, `char.physicsEnabled`) with public accessors.
+- [x] **Extract a clean core vs. game layer.** Done: `engine/` is a generic core (renderer, sky/ocean, scene loader, camera, physics, post-processing) with **zero runtime dependency** on `game/`. Characters + vehicles are content in `game/`, registered onto the engine via the `EntityRegistry` / `SceneLoader` plugin registries — build a non-vehicle game by shipping a different `register`.
+- [x] **tsconfig `three` → `three/webgpu` alias.** Added (mirrors the Vite alias), so `WebGPURenderer`, `PostProcessing`, and node materials are typed. Residual `any` for TSL node handles is confined to a per-file eslint override. *(Still open: replace remaining private-member casts like `getVehicleAxisWorld` / `char.physicsEnabled` with public accessors.)*
 - [ ] **Tests + CI.** Smoke tests (world loads, character spawns, no console errors) and a GitHub Actions gate running `typecheck` + `build` + `lint`.
 - [ ] **Bundle hygiene.** The build is a single ~1.4 MB chunk — code-split and lazy-load assets/scenarios.
 - [ ] **Asset compression pipeline.** Draco/meshopt geometry + KTX2/Basis textures — essential for shipping real worlds over the web.
@@ -70,7 +70,7 @@ The single static world mesh won't scale to large environments.
 
 ## Known issues / tech debt
 
-- WebGPU/TSL types are cast to `any` in places because `@types/three` doesn't cover the aliased `three/webgpu` build (see Milestone 2 tsconfig fix).
-- `eslint.config.js` uses the default recommended `no-explicit-any`; the engine legitimately needs `any` for TSL node params and dynamic physics/DOM code. Decide on a project-wide policy (allow `any`, or a per-directory override for shader/TSL files).
+- WebGPU/TSL types still need `any` for node handles (`@types/three` doesn't model the TSL node graph). This is now scoped to a per-file eslint override rather than sprinkled casts — see `eslint.config.js`.
+- **eslint `no-explicit-any` policy (resolved):** the base rule is `warn`; TSL shader modules (which idiomatically use `any` for node handles) get a per-file override turning it `off`. Add new TSL modules to that glob in `eslint.config.js`.
 - Ocean water is a flat plane with a screen-space raymarch — see Milestone 4.
 - Physics colliders are limited to boxes and trimeshes (`// Convex doesn't work! Stick to boxes!`).
