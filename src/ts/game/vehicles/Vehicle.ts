@@ -106,11 +106,34 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 		for (let i = 0; i < this.rayCastVehicle.wheelInfos.length; i++)
 		{
 			this.rayCastVehicle.updateWheelTransform(i);
-			const transform = this.rayCastVehicle.wheelInfos[i].worldTransform;
+			const wheelInfo = this.rayCastVehicle.wheelInfos[i];
 
 			const wheelObject = this.wheels[i].wheelObject;
-			wheelObject.position.copy(Utils.threeVector(transform.position));
-			wheelObject.quaternion.copy(Utils.threeQuat(transform.quaternion));
+
+			// Local position
+			const localPos = new CANNON.Vec3().copy(wheelInfo.directionLocal);
+			localPos.scale(wheelInfo.suspensionLength, localPos);
+			localPos.vadd(wheelInfo.chassisConnectionPointLocal, localPos);
+
+			wheelObject.position.copy(Utils.threeVector(localPos));
+
+			// Local quaternion
+			const up = new CANNON.Vec3().copy(wheelInfo.directionLocal);
+			up.scale(-1, up);
+
+			const right = new CANNON.Vec3().copy(wheelInfo.axleLocal);
+			right.normalize();
+
+			const steeringOrn = new CANNON.Quaternion();
+			steeringOrn.setFromAxisAngle(up, wheelInfo.steering);
+
+			const rotatingOrn = new CANNON.Quaternion();
+			rotatingOrn.setFromAxisAngle(right, wheelInfo.rotation);
+
+			const localQuat = new CANNON.Quaternion();
+			steeringOrn.mult(rotatingOrn, localQuat);
+
+			wheelObject.quaternion.copy(Utils.threeQuat(localQuat));
 		}
 
 		this.updateMatrixWorld();
@@ -336,7 +359,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 
 			this.wheels.forEach((wheel) =>
 			{
-				world.graphicsWorld.attach(wheel.wheelObject);
+				this.attach(wheel.wheelObject);
 			});
 
 		}
@@ -356,10 +379,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 			// world.physicsWorld.remove(this.collision);
 			this.rayCastVehicle.removeFromWorld(world.physicsWorld);
 
-			this.wheels.forEach((wheel) =>
-			{
-				world.graphicsWorld.remove(wheel.wheelObject);
-			});
+			// wheels remain attached to the vehicle
 		}
 	}
 
