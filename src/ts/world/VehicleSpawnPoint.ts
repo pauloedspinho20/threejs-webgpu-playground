@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ISpawnPoint } from '../interfaces/ISpawnPoint';
-import { World } from '../world/World';
+import type { EngineContext } from '../core/EngineContext';
 import { Helicopter } from '../vehicles/Helicopter';
 import { Airplane } from '../vehicles/Airplane';
 import { Car } from '../vehicles/Car';
@@ -24,7 +24,7 @@ export class VehicleSpawnPoint implements ISpawnPoint
 		this.object = object;
 	}
 
-	public spawn(loadingManager: LoadingManager, world: World): void
+	public spawn(loadingManager: LoadingManager, world: EngineContext): void
 	{
 		loadingManager.loadGLTF(world.resolveAsset(this.type + '.glb'), (model: GLTF) =>
 		{

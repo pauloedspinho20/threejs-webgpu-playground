@@ -1,17 +1,17 @@
 import { GLTFLoader, GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { LoadingTrackerEntry } from './LoadingTrackerEntry';
-import { World } from '../world/World';
+import type { EngineContext } from './EngineContext';
 
 export class LoadingManager
 {
 	public firstLoad: boolean = true;
 	public onFinishedCallback: () => void;
 
-	private world: World;
+	private world: EngineContext;
 	private gltfLoader: GLTFLoader;
 	private loadingTracker: LoadingTrackerEntry[] = [];
 
-	constructor(world: World)
+	constructor(world: EngineContext)
 	{
 		this.world = world;
 		this.gltfLoader = new GLTFLoader();

@@ -4,6 +4,7 @@ import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 import { CameraOperator } from '../core/CameraOperator';
 import { EngineOptions, ResolvedEngineOptions, resolveEngineOptions } from '../core/EngineOptions';
+import type { IWorldParams, EngineContext } from '../core/EngineContext';
 import { Emitter, EngineEvents, IControlRow, ScenarioInfo } from '../core/EngineEvents';
 import { pass } from 'three/tsl';
 import { fxaa } from 'three/addons/tsl/display/FXAANode.js';
@@ -27,21 +28,10 @@ import { Scenario } from './Scenario';
 import { Sky } from './Sky';
 import { Ocean } from './Ocean';
 
-export interface IWorldParams {
-	Pointer_Lock: boolean;
-	Mouse_Sensitivity: number;
-	Time_Scale: number;
-	Shadows: boolean;
-	FXAA: boolean;
-	Debug_Physics: boolean;
-	Debug_FPS: boolean;
-	Sun_Elevation: number;
-	Sun_Rotation: number;
-}
-
 export type { IControlRow } from '../core/EngineEvents';
+export type { IWorldParams, EngineContext } from '../core/EngineContext';
 
-export class World
+export class World implements EngineContext
 {
 	public renderer: THREE.WebGPURenderer;
 	public camera: THREE.PerspectiveCamera;
@@ -227,7 +217,7 @@ export class World
 	public updatePhysics(timeStep: number): void
 	{
 		this.characters.forEach((char) => {
-			if ((char as any).physicsEnabled) {
+			if (char.physicsEnabled) {
 				char.physicsPreStep(char.characterCapsule.body, char);
 			}
 		});
@@ -242,7 +232,7 @@ export class World
 		this.physicsWorld.step(this.physicsFrameTime, timeStep);
 
 		this.characters.forEach((char) => {
-			if ((char as any).physicsEnabled) {
+			if (char.physicsEnabled) {
 				char.physicsPostStep(char.characterCapsule.body, char);
 			}
 		});

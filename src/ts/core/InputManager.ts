@@ -1,4 +1,4 @@
-import { World } from '../world/World';
+import type { EngineContext } from './EngineContext';
 import { IInputReceiver } from '../interfaces/IInputReceiver';
 import { IUpdatable } from '../interfaces/IUpdatable';
 
@@ -6,7 +6,7 @@ export class InputManager implements IUpdatable
 {
 	public updateOrder: number = 3;
 
-	public world: World;
+	public world: EngineContext;
 	public domElement: HTMLElement;
 	public pointerLock: any;
 	public isLocked: boolean;
@@ -21,7 +21,7 @@ export class InputManager implements IUpdatable
 	public boundOnKeyDown: (evt: Event | MouseEvent | KeyboardEvent) => void;
 	public boundOnKeyUp: (evt: Event | MouseEvent | KeyboardEvent) => void;
 	
-	constructor(world: World, domElement: HTMLElement)
+	constructor(world: EngineContext, domElement: HTMLElement)
 	{
 		this.world = world;
 		this.pointerLock = world.params.Pointer_Lock;

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { SkyMesh } from 'three/addons/objects/SkyMesh.js';
 import { CSMShadowNode } from 'three/addons/csm/CSMShadowNode.js';
-import { World } from './World';
+import type { EngineContext } from '../core/EngineContext';
 import { IUpdatable } from '../interfaces/IUpdatable';
 
 export class Sky extends THREE.Object3D implements IUpdatable
@@ -34,9 +34,9 @@ export class Sky extends THREE.Object3D implements IUpdatable
 
 	private skyMesh: SkyMesh;
 
-	private world: World;
+	private world: EngineContext;
 
-	constructor(world: World)
+	constructor(world: EngineContext)
 	{
 		super();
 

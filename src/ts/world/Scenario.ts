@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ISpawnPoint } from '../interfaces/ISpawnPoint';
 import { VehicleSpawnPoint } from './VehicleSpawnPoint';
 import { CharacterSpawnPoint } from './CharacterSpawnPoint';
-import { World } from '../world/World';
+import type { EngineContext } from '../core/EngineContext';
 import { LoadingManager } from '../core/LoadingManager';
 
 export class Scenario
@@ -11,7 +11,7 @@ export class Scenario
 	public name: string;
 	public spawnAlways: boolean = false;
 	public default: boolean = false;
-	public world: World;
+	public world: EngineContext;
 	public descriptionTitle: string;
 	public descriptionContent: string;
 	public invisible: boolean = false;
@@ -20,7 +20,7 @@ export class Scenario
 	private rootNode: THREE.Object3D;
 	private spawnPoints: ISpawnPoint[] = [];
 
-	constructor(root: THREE.Object3D, world: World)
+	constructor(root: THREE.Object3D, world: EngineContext)
 	{
 		this.rootNode = root;
 		this.world = world;
@@ -93,7 +93,7 @@ export class Scenario
 		});
 	}
 
-	public launch(loadingManager: LoadingManager, world: World): void
+	public launch(loadingManager: LoadingManager, world: EngineContext): void
 	{
 		this.spawnPoints.forEach((sp) => {
 			sp.spawn(loadingManager, world);

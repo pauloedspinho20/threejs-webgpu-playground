@@ -14,7 +14,7 @@ import { OpenVehicleDoor as OpenVehicleDoor } from './character_states/vehicles/
 import { Driving } from './character_states/vehicles/Driving';
 import { ExitingAirplane } from './character_states/vehicles/ExitingAirplane';
 import { ICharacterAI } from '../interfaces/ICharacterAI';
-import { World } from '../world/World';
+import type { EngineContext } from '../core/EngineContext';
 import { IControllable } from '../interfaces/IControllable';
 import { ICharacterState } from '../interfaces/ICharacterState';
 import { IWorldEntity } from '../interfaces/IWorldEntity';
@@ -71,7 +71,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	public groundImpactData: GroundImpactData = new GroundImpactData();
 	public raycastBox: THREE.Mesh;
 	
-	public world: World;
+	public world: EngineContext;
 	public charState: ICharacterState;
 	public behaviour: ICharacterAI;
 	
@@ -80,7 +80,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	public occupyingSeat: VehicleSeat = null;
 	public vehicleEntryInstance: VehicleEntryInstance = null;
 	
-	private physicsEnabled: boolean = true;
+	public physicsEnabled: boolean = true;
 
 	constructor(gltf: GLTF)
 	{
@@ -932,7 +932,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		}
 	}
 
-	public addToWorld(world: World): void
+	public addToWorld(world: EngineContext): void
 	{
 		if (_.includes(world.characters, this))
 		{
@@ -956,7 +956,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		}
 	}
 
-	public removeFromWorld(world: World): void
+	public removeFromWorld(world: EngineContext): void
 	{
 		if (!_.includes(world.characters, this))
 		{

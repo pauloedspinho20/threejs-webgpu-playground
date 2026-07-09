@@ -2,7 +2,7 @@ import { Character } from '../characters/Character';
 import * as THREE from 'three';
 import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as CANNON from 'cannon-es';
-import { World } from '../world/World';
+import type { EngineContext } from '../core/EngineContext';
 import * as _ from 'lodash';
 import { KeyBinding } from '../core/KeyBinding';
 import { VehicleSeat } from './VehicleSeat';
@@ -25,7 +25,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 	public wheels: Wheel[] = [];
 	public drive: string;
 	public camera: THREE.Object3D;
-	public world: World;
+	public world: EngineContext;
 	public help: THREE.AxesHelper;
 	public collision: CANNON.Body;
 	public materials: THREE.Material[] = [];
@@ -111,9 +111,6 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 			const wheelObject = this.wheels[i].wheelObject;
 			wheelObject.position.copy(Utils.threeVector(transform.position));
 			wheelObject.quaternion.copy(Utils.threeQuat(transform.quaternion));
-
-			const upAxisWorld = new CANNON.Vec3();
-			(this.rayCastVehicle as any).getVehicleAxisWorld(this.rayCastVehicle.indexUpAxis, upAxisWorld);
 		}
 
 		this.updateMatrixWorld();
@@ -319,7 +316,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 		});
 	}
 
-	public addToWorld(world: World): void
+	public addToWorld(world: EngineContext): void
 	{
 		if (_.includes(world.vehicles, this))
 		{
@@ -345,7 +342,7 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 		}
 	}
 
-	public removeFromWorld(world: World): void
+	public removeFromWorld(world: EngineContext): void
 	{
 		if (!_.includes(world.vehicles, this))
 		{

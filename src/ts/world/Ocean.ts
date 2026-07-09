@@ -7,7 +7,7 @@ import {
 	Loop, If
 } from 'three/tsl';
 
-import { World } from './World';
+import type { EngineContext } from '../core/EngineContext';
 import { IUpdatable } from '../interfaces/IUpdatable';
 
 // Sea constants (from the original Seascape GLSL shader)
@@ -28,11 +28,11 @@ export class Ocean implements IUpdatable
 	public updateOrder: number = 10;
 	public material: THREE.MeshBasicNodeMaterial;
 
-	private world: World;
+	private world: EngineContext;
 	private uTime: any;
 	private lightDir: any;
 
-	constructor(object: any, world: World)
+	constructor(object: any, world: EngineContext)
 	{
 		this.world = world;
 

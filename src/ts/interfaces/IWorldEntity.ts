@@ -1,4 +1,4 @@
-import { World } from '../world/World';
+import type { EngineContext } from '../core/EngineContext';
 import { EntityType } from '../enums/EntityType';
 import { IUpdatable } from './IUpdatable';
 
@@ -6,6 +6,6 @@ export interface IWorldEntity extends IUpdatable
 {
 	entityType: EntityType;
 
-	addToWorld(world: World): void;
-	removeFromWorld(world: World): void;
+	addToWorld(world: EngineContext): void;
+	removeFromWorld(world: EngineContext): void;
 }
