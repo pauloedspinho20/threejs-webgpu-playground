@@ -24,6 +24,12 @@ export interface EngineOptions
 	/** Element the canvas is mounted into. Defaults to `document.body`. */
 	container?: HTMLElement;
 
+	/** Track the container size via ResizeObserver (+ window resize). Default true. */
+	autoResize?: boolean;
+
+	/** Start the render loop automatically after init(). Default true. */
+	autoStart?: boolean;
+
 	renderer?: {
 		antialias?: boolean;
 		pixelRatio?: number;
@@ -73,6 +79,8 @@ export interface EngineOptions
 export interface ResolvedEngineOptions
 {
 	container: HTMLElement;
+	autoResize: boolean;
+	autoStart: boolean;
 	renderer: {
 		antialias: boolean;
 		pixelRatio: number;
@@ -113,6 +121,8 @@ export function resolveEngineOptions(options: EngineOptions = {}): ResolvedEngin
 
 	return {
 		container: options.container ?? document.body,
+		autoResize: options.autoResize ?? true,
+		autoStart: options.autoStart ?? true,
 		renderer: {
 			antialias: options.renderer?.antialias ?? false,
 			pixelRatio: options.renderer?.pixelRatio ?? window.devicePixelRatio,

@@ -19,19 +19,19 @@ import { LoadingManager } from '../core/LoadingManager';
 import { IWorldEntity } from '../interfaces/IWorldEntity';
 import { IUpdatable } from '../interfaces/IUpdatable';
 import { Character } from '../characters/Character';
-import { Path } from './Path';
+import { Path } from '../world/Path';
 import { CollisionGroups } from '../enums/CollisionGroups';
 import { BoxCollider } from '../physics/colliders/BoxCollider';
 import { TrimeshCollider } from '../physics/colliders/TrimeshCollider';
 import { Vehicle } from '../vehicles/Vehicle';
-import { Scenario } from './Scenario';
-import { Sky } from './Sky';
-import { Ocean } from './Ocean';
+import { Scenario } from '../world/Scenario';
+import { Sky } from '../world/Sky';
+import { Ocean } from '../world/Ocean';
 
 export type { IControlRow } from '../core/EngineEvents';
 export type { IWorldParams, EngineContext } from '../core/EngineContext';
 
-export class World implements EngineContext
+export class Engine implements EngineContext
 {
 	public renderer: THREE.WebGPURenderer;
 	public camera: THREE.PerspectiveCamera;
@@ -67,12 +67,13 @@ export class World implements EngineContext
 	public profiler?: { begin(): void; end(): void };
 
 	private lastScenarioID: string;
+	private rafId: number | undefined;
+	private running: boolean = false;
+	private resizeObserver: ResizeObserver | undefined;
+	private readonly boundResize = (): void => this.resize();
 
 	constructor(options: EngineOptions = {})
 	{
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const scope = this;
-
 		this.options = resolveEngineOptions(options);
 		const opts = this.options;
 
@@ -106,14 +107,13 @@ export class World implements EngineContext
 		opts.container.appendChild(this.renderer.domElement);
 		this.renderer.domElement.id = 'canvas';
 
-		// Auto window resize
-		function onWindowResize(): void
+		// Auto-resize to the container (ResizeObserver) with a window fallback.
+		if (opts.autoResize)
 		{
-			scope.camera.aspect = window.innerWidth / window.innerHeight;
-			scope.camera.updateProjectionMatrix();
-			scope.renderer.setSize(window.innerWidth, window.innerHeight);
+			this.resizeObserver = new ResizeObserver(this.boundResize);
+			this.resizeObserver.observe(opts.container);
+			window.addEventListener('resize', this.boundResize, false);
 		}
-		window.addEventListener('resize', onWindowResize, false);
 
 		// Three.js scene
 		this.graphicsWorld = new THREE.Scene();
@@ -179,8 +179,66 @@ export class World implements EngineContext
 			if (!webgpuAvailable) this.events.emit('webgpu:unsupported');
 			this.events.emit('ready');
 			if (opts.world === null) this.events.emit('world:empty');
-			this.render(this);
+			this.resize();
+			if (opts.autoStart) this.start();
 		});
+	}
+
+	/** Update camera + renderer to the current container/window size. */
+	public resize(): void
+	{
+		const container = this.options.container;
+		const width = container === document.body ? window.innerWidth : container.clientWidth;
+		const height = container === document.body ? window.innerHeight : container.clientHeight;
+		if (width === 0 || height === 0) return;
+
+		this.camera.aspect = width / height;
+		this.camera.updateProjectionMatrix();
+		this.renderer.setSize(width, height);
+	}
+
+	/** Start the render loop (idempotent). */
+	public start(): void
+	{
+		if (this.running) return;
+		this.running = true;
+		this.render(this);
+	}
+
+	/** Stop the render loop (idempotent). */
+	public stop(): void
+	{
+		this.running = false;
+		if (this.rafId !== undefined)
+		{
+			cancelAnimationFrame(this.rafId);
+			this.rafId = undefined;
+		}
+	}
+
+	/** Stop the loop and release GPU + listener resources. */
+	public dispose(): void
+	{
+		this.stop();
+		if (this.resizeObserver !== undefined)
+		{
+			this.resizeObserver.disconnect();
+			this.resizeObserver = undefined;
+		}
+		window.removeEventListener('resize', this.boundResize);
+		this.renderer.dispose();
+	}
+
+	/** Subscribe to an engine event; returns an unsubscribe function. */
+	public on<K extends keyof EngineEvents>(type: K, cb: (payload: EngineEvents[K]) => void): () => void
+	{
+		return this.events.on(type, cb);
+	}
+
+	/** Unsubscribe from an engine event. */
+	public off<K extends keyof EngineEvents>(type: K, cb: (payload: EngineEvents[K]) => void): void
+	{
+		this.events.off(type, cb);
 	}
 
 	/** Snapshot of scenarios for building an app-side menu. */
@@ -285,14 +343,16 @@ export class World implements EngineContext
 	/**
 	 * Rendering loop.
 	 * Implements fps limiter and frame-skipping
-	 * Calls world's "update" function before rendering.
-	 * @param {World} world 
+	 * Calls the engine's "update" function before rendering.
+	 * @param {Engine} world
 	 */
-	public render(world: World): void
+	public render(world: Engine): void
 	{
+		if (!this.running) return;
+
 		this.requestDelta = this.clock.getDelta();
 
-		requestAnimationFrame(() =>
+		this.rafId = requestAnimationFrame(() =>
 		{
 			world.render(world);
 		});
@@ -551,4 +611,10 @@ export class World implements EngineContext
 			char.raycastBox.visible = enabled;
 		});
 	}
+}
+
+/** Convenience factory mirroring `new Engine(options)`. */
+export function createEngine(options?: EngineOptions): Engine
+{
+	return new Engine(options);
 }

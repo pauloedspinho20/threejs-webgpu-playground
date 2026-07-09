@@ -1,7 +1,7 @@
 import * as GUI from 'dat.gui';
 import Swal from 'sweetalert2';
 import { Stats } from '../../lib/utils/Stats';
-import { World } from '../world/World';
+import { Engine } from '../engine/Engine';
 import { IControlRow, ScenarioInfo, WelcomeInfo } from '../core/EngineEvents';
 
 /**
@@ -11,12 +11,12 @@ import { IControlRow, ScenarioInfo, WelcomeInfo } from '../core/EngineEvents';
  */
 export class AppUI
 {
-	private world: World;
+	private world: Engine;
 	private gui: GUI.GUI;
 	private scenarioFolder: GUI.GUI;
 	private scenarioControllers: GUI.GUIController[] = [];
 
-	constructor(world: World)
+	constructor(world: Engine)
 	{
 		this.world = world;
 
