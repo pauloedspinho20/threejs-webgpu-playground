@@ -474,6 +474,16 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		// console.log(this.occupyingSeat);
 		this.charState?.update(timeStep);
 
+		// Aim views strafe: the body faces the look, so redirect the forward-only
+		// velocity target onto the full 2D input (W/S + A/D). Rotated by the
+		// look-facing orientation in physicsPreStep, this yields camera-relative
+		// movement in every direction. (Third-person keeps walk-where-you-point.)
+		if (this.viewMode !== 'third')
+		{
+			const speed = this.velocityTarget.length();
+			this.velocityTarget.copy(this.getLocalMovementDirection()).multiplyScalar(speed);
+		}
+
 		// this.visuals.position.copy(this.modelOffset);
 		if (this.physicsEnabled) this.springMovement(timeStep);
 		if (this.physicsEnabled) this.springRotation(timeStep);
