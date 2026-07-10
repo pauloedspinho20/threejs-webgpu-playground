@@ -44,6 +44,19 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	public mixer: THREE.AnimationMixer;
 	/** Head bone, pitched toward the camera aim so the body visibly looks up/down. */
 	private headBone?: THREE.Object3D;
+	/** Arm bones (real model), posed forward to "aim" in the aim views and fire from. */
+	private armUpperR?: THREE.Object3D;
+	private armLowerR?: THREE.Object3D;
+	private armUpperL?: THREE.Object3D;
+	private armLowerL?: THREE.Object3D;
+	/** Per-hand recoil timers (seconds), kicked on cast. */
+	private rightRecoil: number = 0;
+	private leftRecoil: number = 0;
+
+	// First-person arm aim pose (bone length axis is local +Y). Right side uses
+	// these directly; left mirrors the Y/Z signs. Public so it can be tuned live.
+	public armAim = { upperX: -0.15, upperY: 0, upperZ: 0.28, lowerX: -0.35, lowerY: 0, lowerZ: 0.12, recoil: 0.6 };
+	private static readonly RECOIL_TIME = 0.15;
 
 	// Movement
 	public acceleration: THREE.Vector3 = new THREE.Vector3();
@@ -69,9 +82,11 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	public viewMode: 'third' | 'shoulder' | 'first' = 'third';
 	/** Eye height above the character's origin (physics capsule centre), world units. Fallback when there's no head bone. */
 	public firstPersonEyeHeight: number = 0.6;
-	/** Offset added to the head bone's world position for the aim camera / eye (raised above the head so the view sits high). */
+	/** Over-shoulder: offset added to the head bone world position (high orbit centre). */
 	public headCameraOffset: THREE.Vector3 = new THREE.Vector3(0, 0.55, 0);
-	private viewmodelHandsBuilt: boolean = false;
+	/** First-person: raise above the head bone to eye level, and nudge forward to the face. */
+	public firstPersonEyeRaise: number = 0.05;
+	public firstPersonEyeForward: number = 0;
 
 	/** True while in the first-person view (camera at the eye, body hidden). */
 	public get firstPerson(): boolean { return this.viewMode === 'first'; }
@@ -124,6 +139,10 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		this.tiltContainer.add(this.modelContainer);
 		this.modelContainer.add(model.scene);
 		this.headBone = model.scene.getObjectByName('head') ?? undefined;
+		this.armUpperR = model.scene.getObjectByName('arm_upperR') ?? undefined;
+		this.armLowerR = model.scene.getObjectByName('arm_lowerR') ?? undefined;
+		this.armUpperL = model.scene.getObjectByName('arm_upperL') ?? undefined;
+		this.armLowerL = model.scene.getObjectByName('arm_lowerL') ?? undefined;
 
 		this.mixer = new THREE.AnimationMixer(model.scene);
 
@@ -462,9 +481,16 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		// layers on top of the current animation pose, which resets each frame).
 		if (this.headBone !== undefined)
 		{
-			const aim = THREE.MathUtils.degToRad(this.world.cameraOperator.phi) * 0.6;
+			// Ease off the pitch in first person so it doesn't wobble the
+			// head-mounted camera; keep it for the visible body otherwise.
+			const factor = this.firstPerson ? 0.15 : 0.6;
+			const aim = THREE.MathUtils.degToRad(this.world.cameraOperator.phi) * factor;
 			this.headBone.rotateX(aim);
 		}
+
+		// Pose the real arms into a forward "aim" stance in the aim views (also
+		// post-mixer). Fires-from and recoil live here too.
+		this.poseArms(timeStep);
 
 		// Sync physics/graphics
 		if (this.physicsEnabled)
@@ -574,7 +600,18 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		{
 			this.headBone.updateWorldMatrix(true, false);
 			this.headBone.getWorldPosition(op.target);
-			op.target.add(this.headCameraOffset);
+			if (this.firstPerson)
+			{
+				// Sit at the eyes and nudge to the front of the head so the raised
+				// arms read as first-person hands and the head geometry doesn't clip.
+				op.target.y += this.firstPersonEyeRaise;
+				op.target.addScaledVector(this.viewVector, this.firstPersonEyeForward);
+			}
+			else
+			{
+				// Over-shoulder: high orbit centre for a raised, looking-down framing.
+				op.target.add(this.headCameraOffset);
+			}
 		}
 		else
 		{
@@ -709,15 +746,14 @@ export class Character extends THREE.Object3D implements IWorldEntity
 			op.setRadius(0, true);
 			op.setShoulder(0, true);
 			op.setMode(new FirstPersonCameraMode());
-			this.modelContainer.visible = false;
-			this.buildViewmodelHands();
-			this.world.viewmodel.enabled = true;
+			// Body stays visible: the real arms (posed in poseArms) are the
+			// first-person hands, seen from the head-mounted camera.
+			this.modelContainer.visible = true;
 			return;
 		}
 
 		op.setMode(new OrbitCameraMode());
 		this.modelContainer.visible = true;
-		this.world.viewmodel.enabled = false;
 
 		if (this.viewMode === 'shoulder')
 		{
@@ -731,33 +767,47 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		}
 	}
 
-	/** Lazily populate the first-person hand sockets (placeholder arms; A4 replaces these). */
-	private buildViewmodelHands(): void
+	/**
+	 * Pose the real arm bones into a forward "aim" stance while in an aim view
+	 * (over-shoulder / first-person), overriding the animation for those bones
+	 * only. Runs post-mixer. Bone length is local +Y; the tuned Euler angles
+	 * raise the upper arms forward and bend the elbows so the hands point ahead.
+	 */
+	private poseArms(timeStep: number): void
 	{
-		if (this.viewmodelHandsBuilt) return;
-		this.viewmodelHandsBuilt = true;
+		if (this.rightRecoil > 0) this.rightRecoil = Math.max(0, this.rightRecoil - timeStep);
+		if (this.leftRecoil > 0) this.leftRecoil = Math.max(0, this.leftRecoil - timeStep);
 
-		const material = new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.85 });
-		const makeArm = (): THREE.Mesh =>
-		{
-			const arm = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.45), material);
-			arm.position.z = -0.22; // extend forward from the socket toward the view
-			return arm;
-		};
-		this.world.viewmodel.rightHand.add(makeArm());
-		this.world.viewmodel.leftHand.add(makeArm());
+		if (this.viewMode === 'third') return; // arms animate normally otherwise
+
+		this.setArmAim(this.armUpperR, this.armLowerR, 1, this.rightRecoil);
+		this.setArmAim(this.armUpperL, this.armLowerL, -1, this.leftRecoil);
 	}
 
-	/** Equip an ability (by registered id) into the given hand. */
+	private setArmAim(upper: THREE.Object3D | undefined, lower: THREE.Object3D | undefined, side: number, recoil: number): void
+	{
+		if (upper === undefined || lower === undefined) return;
+		const a = this.armAim;
+		// Recoil pulls the upper arm back briefly after a cast.
+		const kick = (recoil / Character.RECOIL_TIME) * a.recoil;
+		upper.rotation.set(a.upperX + kick, a.upperY * side, a.upperZ * side);
+		lower.rotation.set(a.lowerX, a.lowerY * side, a.lowerZ * side);
+	}
+
+	/** Equip an ability (by registered id) into the given hand; orb rides the hand bone. */
 	public equip(hand: 'left' | 'right', abilityId: string): void
 	{
 		const ability = this.world.abilities.create(abilityId);
-		const socket = hand === 'right' ? this.world.viewmodel.rightHand : this.world.viewmodel.leftHand;
+		const socket = hand === 'right' ? this.armLowerR : this.armLowerL;
 		const prevOrb = hand === 'right' ? this.rightOrb : this.leftOrb;
 
-		if (prevOrb !== undefined) socket.remove(prevOrb);
+		if (prevOrb !== undefined) prevOrb.parent?.remove(prevOrb);
 		const orb = ability.createViewmodel?.() ?? undefined;
-		if (orb) socket.add(orb);
+		if (orb && socket !== undefined)
+		{
+			orb.position.set(0, 0.42, 0); // hand end, along the forearm bone (+Y)
+			socket.add(orb);
+		}
 
 		if (hand === 'right') { this.rightHandAbility = ability; this.rightOrb = orb; }
 		else { this.leftHandAbility = ability; this.leftOrb = orb; }
@@ -774,15 +824,28 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		const cooldown = hand === 'right' ? this.rightCooldown : this.leftCooldown;
 		if (ability === undefined || cooldown > 0) return;
 
-		const origin = new THREE.Vector3();
-		this.getWorldPosition(origin);
-		origin.y += this.firstPersonEyeHeight;
 		const direction = this.world.cameraOperator.getForward();
+
+		// Fire from the hand bone (forearm end), nudged forward so the bolt
+		// clears the arm; fall back to the eye if the arm bone is missing.
+		const arm = hand === 'right' ? this.armLowerR : this.armLowerL;
+		const origin = new THREE.Vector3();
+		if (arm !== undefined)
+		{
+			arm.updateWorldMatrix(true, false);
+			arm.getWorldPosition(origin);
+			origin.addScaledVector(direction, 0.4);
+		}
+		else
+		{
+			this.getWorldPosition(origin);
+			origin.y += this.firstPersonEyeHeight;
+		}
 
 		ability.cast({ ctx: this.world, origin, direction, hand });
 
-		if (hand === 'right') this.rightCooldown = ability.cooldown;
-		else this.leftCooldown = ability.cooldown;
+		if (hand === 'right') { this.rightCooldown = ability.cooldown; this.rightRecoil = Character.RECOIL_TIME; }
+		else { this.leftCooldown = ability.cooldown; this.leftRecoil = Character.RECOIL_TIME; }
 	}
 
 	public rotateModel(): void
