@@ -4,10 +4,11 @@ import type { IUpdatable } from '../../engine/interfaces/IUpdatable';
 import { applyAreaDamage } from '../combat/Damageable';
 
 /**
- * A short-lived impact burst: an additive fireball that expands and fades, a
- * bright flash light, and an expanding shock ring. Registers itself as an
- * updatable and removes itself when finished. Placeholder VFX — a natural
- * candidate for a compute-particle upgrade later.
+ * A short-lived impact burst: an additive fireball that expands and fades plus
+ * an expanding shock ring. Self-bright (additive), so no dynamic light —
+ * adding/removing lights forces a WebGPU shader recompile (frame hitch on every
+ * hit). Registers itself as an updatable and removes itself when finished.
+ * Placeholder VFX — a natural candidate for a compute-particle upgrade later.
  */
 export class Explosion implements IUpdatable
 {
@@ -16,10 +17,8 @@ export class Explosion implements IUpdatable
 	private readonly ctx: EngineContext;
 	private readonly core: THREE.Mesh;
 	private readonly ring: THREE.Mesh;
-	private readonly light: THREE.PointLight;
 	private readonly coreMat: THREE.MeshBasicMaterial;
 	private readonly ringMat: THREE.MeshBasicMaterial;
-	private readonly baseIntensity: number = 25;
 	private age: number = 0;
 	private readonly duration: number = 0.35;
 
@@ -28,7 +27,7 @@ export class Explosion implements IUpdatable
 		this.ctx = ctx;
 
 		this.coreMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false });
-		this.core = new THREE.Mesh(new THREE.SphereGeometry(radius, 20, 20), this.coreMat);
+		this.core = new THREE.Mesh(new THREE.SphereGeometry(radius, 16, 16), this.coreMat);
 		this.core.position.copy(position);
 		this.core.scale.setScalar(0.25);
 
@@ -36,10 +35,7 @@ export class Explosion implements IUpdatable
 		this.ring = new THREE.Mesh(new THREE.RingGeometry(radius * 0.6, radius, 24), this.ringMat);
 		this.ring.position.copy(position);
 
-		this.light = new THREE.PointLight(color, this.baseIntensity, radius * 8);
-		this.light.position.copy(position);
-
-		ctx.graphicsWorld.add(this.core, this.ring, this.light);
+		ctx.graphicsWorld.add(this.core, this.ring);
 
 		// Splash damage: full at the centre, falling off across ~2x the blast radius.
 		applyAreaDamage(position, radius * 2, 120);
@@ -61,15 +57,12 @@ export class Explosion implements IUpdatable
 		this.ring.lookAt(this.ctx.camera.position);
 		this.ringMat.opacity = Math.max(0, 0.9 - t * 1.2);
 
-		// Flash: bright then out.
-		this.light.intensity = this.baseIntensity * (1 - t);
-
 		if (t >= 1) this.dispose();
 	}
 
 	private dispose(): void
 	{
-		this.ctx.graphicsWorld.remove(this.core, this.ring, this.light);
+		this.ctx.graphicsWorld.remove(this.core, this.ring);
 		this.core.geometry.dispose();
 		this.coreMat.dispose();
 		this.ring.geometry.dispose();
