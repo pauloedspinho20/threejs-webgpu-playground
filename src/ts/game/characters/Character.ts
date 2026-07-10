@@ -42,6 +42,8 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	public modelContainer: THREE.Group;
 	public materials: THREE.Material[] = [];
 	public mixer: THREE.AnimationMixer;
+	/** Head bone, pitched toward the camera aim so the body visibly looks up/down. */
+	private headBone?: THREE.Object3D;
 
 	// Movement
 	public acceleration: THREE.Vector3 = new THREE.Vector3();
@@ -119,6 +121,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		this.modelContainer.position.y = -0.57;
 		this.tiltContainer.add(this.modelContainer);
 		this.modelContainer.add(model.scene);
+		this.headBone = model.scene.getObjectByName('head') ?? undefined;
 
 		this.mixer = new THREE.AnimationMixer(model.scene);
 
@@ -451,6 +454,14 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		if (this.physicsEnabled) this.springRotation(timeStep);
 		if (this.physicsEnabled) this.rotateModel();
 		if (this.mixer !== undefined) this.mixer.update(timeStep);
+
+		// Pitch the head toward the camera aim (applied after the mixer so it
+		// layers on top of the current animation pose, which resets each frame).
+		if (this.headBone !== undefined)
+		{
+			const aim = THREE.MathUtils.degToRad(this.world.cameraOperator.phi) * 0.6;
+			this.headBone.rotateX(aim);
+		}
 
 		// Sync physics/graphics
 		if (this.physicsEnabled)
