@@ -63,11 +63,14 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	public viewVector: THREE.Vector3;
 	public actions: { [action: string]: KeyBinding };
 
-	/** First-person view: camera at the eye, body hidden, yaw drives the body. */
-	public firstPerson: boolean = false;
+	/** Active on-foot camera view. Cycled with V. */
+	public viewMode: 'third' | 'shoulder' | 'first' = 'third';
 	/** Eye height above the character's origin (physics capsule centre), world units. */
 	public firstPersonEyeHeight: number = 0.6;
 	private viewmodelHandsBuilt: boolean = false;
+
+	/** True while in the first-person view (camera at the eye, body hidden). */
+	public get firstPerson(): boolean { return this.viewMode === 'first'; }
 
 	/** Dual-wield loadout: an ability per hand, each with its own cooldown timer. */
 	public rightHandAbility?: Ability;
@@ -309,7 +312,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 			}
 			else if (code === 'KeyV' && pressed === true)
 			{
-				this.toggleFirstPerson();
+				this.cycleView();
 			}
 			else if (code === 'KeyR' && pressed === true && event.shiftKey === true)
 			{
@@ -474,6 +477,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		if (this.controlledObject !== undefined)
 		{
 			this.world.viewmodel.enabled = false; // no hands while controlling a vehicle
+			this.world.cameraOperator.setShoulder(0, true); // no shoulder pan in a vehicle
 			this.controlledObject.inputReceiverInit();
 			return;
 		}
@@ -513,7 +517,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 			},
 			{
 				keys: ['V'],
-				desc: 'Toggle view (1st / 3rd person)'
+				desc: 'Cycle view (3rd / shoulder / 1st)'
 			},
 			{
 				keys: ['Shift', '+', 'R'],
@@ -636,37 +640,60 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		}
 	}
 
-	/** Toggle between first-person and third-person views (on-foot only). */
-	public toggleFirstPerson(): void
+	/** Cycle the on-foot view: third -> over-shoulder -> first -> third. */
+	public cycleView(): void
 	{
-		this.setFirstPerson(!this.firstPerson);
+		const order: Array<'third' | 'shoulder' | 'first'> = ['third', 'shoulder', 'first'];
+		this.setViewMode(order[(order.indexOf(this.viewMode) + 1) % order.length]);
 	}
 
-	/** Switch to first- or third-person (no-op if already in that view). */
-	public setFirstPerson(enabled: boolean): void
+	/** Switch to a specific on-foot view (no-op if already there). */
+	public setViewMode(mode: 'third' | 'shoulder' | 'first'): void
 	{
-		if (this.firstPerson === enabled) return;
-		this.firstPerson = enabled;
+		if (this.viewMode === mode) return;
+		this.viewMode = mode;
 		this.applyViewMode();
 	}
 
-	/** Apply camera mode, radius, body visibility, and viewmodel for the current view. */
+	/** Backwards-compatible helper: enter first person, or return to third. */
+	public setFirstPerson(enabled: boolean): void
+	{
+		this.setViewMode(enabled ? 'first' : 'third');
+	}
+
+	/**
+	 * Apply camera mode, radius, shoulder pan, body visibility, and viewmodel
+	 * for the current view. Radius/shoulder use lerped (non-instant) setters so
+	 * third <-> over-shoulder glides; first-person swaps the camera mode.
+	 */
 	private applyViewMode(): void
 	{
-		if (this.firstPerson)
+		const op = this.world.cameraOperator;
+
+		if (this.viewMode === 'first')
 		{
-			this.world.cameraOperator.setRadius(0, true);
-			this.world.cameraOperator.setMode(new FirstPersonCameraMode());
+			op.setRadius(0, true);
+			op.setShoulder(0, true);
+			op.setMode(new FirstPersonCameraMode());
 			this.modelContainer.visible = false;
 			this.buildViewmodelHands();
 			this.world.viewmodel.enabled = true;
+			return;
 		}
-		else
+
+		op.setMode(new OrbitCameraMode());
+		this.modelContainer.visible = true;
+		this.world.viewmodel.enabled = false;
+
+		if (this.viewMode === 'shoulder')
 		{
-			this.world.cameraOperator.setRadius(1.6, true);
-			this.world.cameraOperator.setMode(new OrbitCameraMode());
-			this.modelContainer.visible = true;
-			this.world.viewmodel.enabled = false;
+			op.setRadius(1.3, false);
+			op.setShoulder(0.5, false);
+		}
+		else // third
+		{
+			op.setRadius(1.6, false);
+			op.setShoulder(0, false);
 		}
 	}
 

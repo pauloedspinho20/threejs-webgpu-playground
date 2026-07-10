@@ -40,11 +40,13 @@ direction. Today [`CameraOperator`](src/ts/engine/CameraOperator.ts) is a single
 orbit rig (`target` + `radius` + `theta`/`phi`) with no mode abstraction — that
 abstraction is the missing primitive. Build in independently-shippable layers:
 
-- [ ] **A1 · Camera-mode strategy (foundation).** Refactor `CameraOperator` to host swappable `ICameraMode` strategies (`enter`/`exit`/`update`, each mapping target + input → camera pose). Port the existing third-person and free-cam into modes with **zero behavior change** (pure refactor, verifiable against the current demo). Lives in `engine/` (generic). Enables everything below.
-- [ ] **A2 · First-person mode.** (1) **Eye anchor** — target follows a head bone / configurable eye-height offset, not the body center. (2) **Yaw coupling** — mouse yaw drives `character.orientation` directly (body turns with the look); pitch stays on the camera and can drive spine/neck bones for visible aim. (3) **Hide own body** at `radius → 0` so the mesh doesn't occlude the lens.
-- [ ] **A3 · Viewmodel pass (the "hands").** Render arms + held items in a second pass with a dedicated ~55° camera and cleared depth, composited over the world so hands never clip into walls. Add `leftHand` / `rightHand` sockets anchored to the view camera.
-- [ ] **A4 · Ability / equip system (dual-wield powers).** `Equippable` (mesh + behavior) and `Ability`/`Spell` (cast, cooldown, cost, VFX hook) registered through the existing plugin registries. Skyrim mapping: **RMB → right hand, LMB → left hand**, each independently equippable with a weapon, spell, or torch. Spell VFX is the natural home for TSL compute particles (see Milestone 4).
-- [ ] **A5 · Over-the-shoulder / aim mode + transitions.** Offset + short-radius aim mode, plus smooth lerped transitions between FP ↔ shoulder ↔ third-person, cycled with a key.
+- [x] **A1 · Camera-mode strategy (foundation).** `CameraOperator` hosts swappable `ICameraMode` strategies (`enter`/`exit`/`update`); third-person/free-cam ported to `OrbitCameraMode` with zero behavior change. Lives in `engine/`; modes exported from the public barrel.
+- [x] **A2 · First-person mode.** `FirstPersonCameraMode` (camera at the eye, looking along `theta`/`phi`); `V` toggles it, body hidden, eye-height offset (`firstPersonEyeHeight`). Movement is camera-relative (W/A/S/D → forward/back/strafe).
+- [x] **A3 · Viewmodel pass (the "hands").** `engine/Viewmodel`: separate scene + narrow-FOV camera, rendered after the world with depth cleared, `leftHand`/`rightHand` sockets. *(FXAA is skipped while active — a node-graph composite is the follow-up; see Milestone 4 post-FX.)*
+- [x] **A4 · Ability / equip system (dual-wield powers).** `Ability` + `AbilityRegistry`; RMB → right hand, LMB → left hand, per-hand cooldowns, viewmodel orb per hand. `MagicBolt` fires a `Projectile` that raycasts the physics world and detonates an `Explosion` on impact (knockback on dynamic bodies). Casting is first-person only. Spell VFX → TSL compute particles is the natural upgrade (Milestone 4).
+- [x] **A5 · Over-the-shoulder / aim mode + transitions.** `V` cycles third → over-shoulder → first. Over-shoulder = orbit at a shorter radius + a lerped lateral shoulder pan; third ↔ shoulder transitions glide (radius + shoulder lerp).
+
+*Milestone complete.* Follow-ups worth doing: a true aim-lock in over-shoulder (camera fixed behind, mouse aims), spine/neck bones for visible first-person aim, and the FXAA-with-viewmodel node composite.
 
 **Supporting work this milestone needs (elevated from later milestones):**
 

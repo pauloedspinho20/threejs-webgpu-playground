@@ -24,6 +24,9 @@ export class CameraOperator implements IInputReceiver, IUpdatable
 	public onMouseDownTheta: unknown;
 	public onMouseDownPhi: unknown;
 	public targetRadius: number = 1;
+	/** Lateral over-the-shoulder pan (world units, along camera-right). Lerps to `targetShoulder`. */
+	public shoulder: number = 0;
+	public targetShoulder: number = 0;
 
 	public movementSpeed: number;
 	public actions: { [action: string]: KeyBinding };
@@ -77,6 +80,16 @@ export class CameraOperator implements IInputReceiver, IUpdatable
 		if (instantly === true)
 		{
 			this.radius = value;
+		}
+	}
+
+	/** Lateral over-the-shoulder pan. Lerps unless `instantly`. */
+	public setShoulder(value: number, instantly: boolean = false): void
+	{
+		this.targetShoulder = value;
+		if (instantly === true)
+		{
+			this.shoulder = value;
 		}
 	}
 
@@ -172,6 +185,7 @@ export class CameraOperator implements IInputReceiver, IUpdatable
 	{
 		this.target.copy(this.camera.position);
 		this.setRadius(0, true);
+		this.setShoulder(0, true);
 		this.setMode(new OrbitCameraMode()); // free-fly relies on orbit-at-zero-radius
 		// this.world.dirLight.target = this.world.camera;
 

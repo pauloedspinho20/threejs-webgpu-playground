@@ -9,15 +9,31 @@ import type { ICameraMode } from './ICameraMode';
  */
 export class OrbitCameraMode implements ICameraMode
 {
+	private readonly right = new THREE.Vector3();
+	private readonly lookAtPoint = new THREE.Vector3();
+
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	public update(op: CameraOperator, _timeScale: number): void
 	{
 		op.radius = THREE.MathUtils.lerp(op.radius, op.targetRadius, 0.1);
+		op.shoulder = THREE.MathUtils.lerp(op.shoulder, op.targetShoulder, 0.1);
 
 		op.camera.position.x = op.target.x + op.radius * Math.sin(op.theta * Math.PI / 180) * Math.cos(op.phi * Math.PI / 180);
 		op.camera.position.y = op.target.y + op.radius * Math.sin(op.phi * Math.PI / 180);
 		op.camera.position.z = op.target.z + op.radius * Math.cos(op.theta * Math.PI / 180) * Math.cos(op.phi * Math.PI / 180);
 		op.camera.updateMatrix();
 		op.camera.lookAt(op.target);
+
+		// Over-the-shoulder: pan the camera and its look target sideways along the
+		// camera's right axis, so the subject sits off-centre without changing the
+		// view direction.
+		if (Math.abs(op.shoulder) > 1e-4)
+		{
+			op.camera.updateMatrixWorld();
+			this.right.setFromMatrixColumn(op.camera.matrixWorld, 0).normalize();
+			op.camera.position.addScaledVector(this.right, op.shoulder);
+			this.lookAtPoint.copy(op.target).addScaledVector(this.right, op.shoulder);
+			op.camera.lookAt(this.lookAtPoint);
+		}
 	}
 }
