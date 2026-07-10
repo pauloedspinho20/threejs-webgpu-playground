@@ -748,8 +748,9 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	/** Cast the ability held in the given hand, if equipped and off cooldown. */
 	private castHand(hand: 'left' | 'right'): void
 	{
-		// Abilities are only wielded in the first-person view.
-		if (!this.firstPerson) return;
+		// Abilities are wielded in the aim views (over-shoulder + first-person),
+		// not in the default third-person orbit.
+		if (this.viewMode === 'third') return;
 
 		const ability = hand === 'right' ? this.rightHandAbility : this.leftHandAbility;
 		const cooldown = hand === 'right' ? this.rightCooldown : this.leftCooldown;
