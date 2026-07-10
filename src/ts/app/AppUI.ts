@@ -111,10 +111,9 @@ export class AppUI {
     camFolder.add(cameraTuning, "shoulderHeadHeight", 0, 1.5).name("Shoulder height");
     camFolder.add(cameraTuning, "fpEyeRaise", -0.3, 0.6).name("FP eye raise");
     camFolder.add(cameraTuning, "fpEyeForward", -0.3, 0.5).name("FP eye forward");
-    camFolder.add(cameraTuning, "armUpperX", -1.5, 1.5).name("Arm upper X");
-    camFolder.add(cameraTuning, "armUpperZ", -1, 1).name("Arm upper Z");
-    camFolder.add(cameraTuning, "armLowerX", -1.5, 0.5).name("Arm lower X");
-    camFolder.add(cameraTuning, "armLowerZ", -0.5, 1).name("Arm lower Z");
+    camFolder.add(cameraTuning, "armDownTilt", -0.5, 1.2).name("Arm down tilt");
+    camFolder.add(cameraTuning, "armSplay", 0, 0.8).name("Arm splay");
+    camFolder.add(cameraTuning, "forearmBend", -0.3, 0.8).name("Forearm bend");
     camFolder.add(cameraTuning, "armRecoil", 0, 1.5).name("Arm recoil");
     camFolder.add(cameraTuning, "vehicleFrontDistance", 1, 6).name("Veh front dist");
     camFolder.add(cameraTuning, "vehicleFrontHeight", 0, 3).name("Veh front height");

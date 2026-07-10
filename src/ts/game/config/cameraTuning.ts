@@ -10,12 +10,12 @@ export const cameraTuning = {
 	fpEyeRaise: 0.05,         // first-person: eye height above the head bone
 	fpEyeForward: 0.0,        // first-person: nudge toward the face (along the look)
 
-	// First-person / over-shoulder arm aim pose (radians; left mirrors Z)
-	armUpperX: -0.15,
-	armUpperZ: 0.28,
-	armLowerX: -0.35,
-	armLowerZ: 0.12,
-	armRecoil: 0.6,           // extra upper-arm kick at full recoil
+	// Arm aim (world-space): the arm bones point their length axis along the aim
+	// direction, tilted down and splayed apart, so the hands reach forward.
+	armDownTilt: 0.35,        // how much the reach tilts below the look direction
+	armSplay: 0.22,           // how far the two hands splay apart (horizontal)
+	forearmBend: 0.18,        // forearm lifted back up from the upper-arm line
+	armRecoil: 0.5,           // downward arm dip at full recoil
 
 	// Vehicle front-mounted camera
 	vehicleFrontDistance: 3.2,

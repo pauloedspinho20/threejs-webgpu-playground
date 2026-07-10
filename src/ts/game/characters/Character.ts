@@ -57,6 +57,14 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	// Aim pose + camera offsets live in the shared `cameraTuning` config (read
 	// every frame, bound to the debug GUI for live tuning).
 	private static readonly RECOIL_TIME = 0.15;
+	/** Bone length axis in local space (armature bones run along +Y). */
+	private static readonly BONE_AXIS = new THREE.Vector3(0, 1, 0);
+	// Scratch objects for the world-space arm aiming (avoid per-frame allocation).
+	private readonly aimLook = new THREE.Vector3();
+	private readonly aimDir = new THREE.Vector3();
+	private readonly aimRight = new THREE.Vector3();
+	private readonly aimQ1 = new THREE.Quaternion();
+	private readonly aimQ2 = new THREE.Quaternion();
 
 	// Movement
 	public acceleration: THREE.Vector3 = new THREE.Vector3();
@@ -765,8 +773,9 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	/**
 	 * Pose the real arm bones into a forward "aim" stance while in an aim view
 	 * (over-shoulder / first-person), overriding the animation for those bones
-	 * only. Runs post-mixer. Bone length is local +Y; the tuned Euler angles
-	 * raise the upper arms forward and bend the elbows so the hands point ahead.
+	 * only. Runs post-mixer. Points each bone's length axis (+Y) along the aim
+	 * direction so the hands always reach forward regardless of the rig's rest
+	 * orientation (no per-bone Euler tuning).
 	 */
 	private poseArms(timeStep: number): void
 	{
@@ -775,18 +784,45 @@ export class Character extends THREE.Object3D implements IWorldEntity
 
 		if (this.viewMode === 'third') return; // arms animate normally otherwise
 
-		this.setArmAim(this.armUpperR, this.armLowerR, 1, this.rightRecoil);
-		this.setArmAim(this.armUpperL, this.armLowerL, -1, this.leftRecoil);
+		// Aim direction = where the player looks / where bolts fire.
+		this.world.cameraOperator.getForward(this.aimLook);
+		this.aimArm(this.armUpperR, this.armLowerR, 1, this.rightRecoil);
+		this.aimArm(this.armUpperL, this.armLowerL, -1, this.leftRecoil);
 	}
 
-	private setArmAim(upper: THREE.Object3D | undefined, lower: THREE.Object3D | undefined, side: number, recoil: number): void
+	private aimArm(upper: THREE.Object3D | undefined, lower: THREE.Object3D | undefined, side: number, recoil: number): void
 	{
 		if (upper === undefined || lower === undefined) return;
-		const a = cameraTuning;
-		// Recoil pulls the upper arm back briefly after a cast.
-		const kick = (recoil / Character.RECOIL_TIME) * a.armRecoil;
-		upper.rotation.set(a.armUpperX + kick, 0, a.armUpperZ * side);
-		lower.rotation.set(a.armLowerX, 0, a.armLowerZ * side);
+		const t = cameraTuning;
+		const look = this.aimLook;
+
+		// Horizontal "right of look" for splaying the two hands apart.
+		this.aimRight.set(look.z, 0, -look.x).normalize();
+		const dip = t.armDownTilt + (recoil / Character.RECOIL_TIME) * t.armRecoil;
+
+		// Upper arm: aim, tilted down (more on recoil) and splayed outward.
+		this.aimDir.copy(look);
+		this.aimDir.y -= dip;
+		this.aimDir.addScaledVector(this.aimRight, side * t.armSplay);
+		this.aimDir.normalize();
+		this.pointBoneY(upper, this.aimDir);
+
+		// Forearm: continue the reach, lifted back up a touch.
+		upper.updateWorldMatrix(true, false);
+		this.aimDir.copy(look);
+		this.aimDir.y -= dip - t.forearmBend;
+		this.aimDir.addScaledVector(this.aimRight, side * t.armSplay);
+		this.aimDir.normalize();
+		this.pointBoneY(lower, this.aimDir);
+	}
+
+	/** Rotate a bone so its local +Y axis points along `worldDir` (world space). */
+	private pointBoneY(bone: THREE.Object3D, worldDir: THREE.Vector3): void
+	{
+		if (bone.parent === null) return;
+		bone.parent.getWorldQuaternion(this.aimQ1);
+		this.aimQ2.setFromUnitVectors(Character.BONE_AXIS, worldDir);
+		bone.quaternion.copy(this.aimQ1.invert().multiply(this.aimQ2));
 	}
 
 	/** Equip an ability (by registered id) into the given hand; orb rides the hand bone. */
