@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import type { Engine } from '../index';
 import { Car } from './vehicles/Car';
 import { Helicopter } from './vehicles/Helicopter';
@@ -6,6 +7,7 @@ import { Character } from './characters/Character';
 import { Path } from './world/Path';
 import { Scenario } from './world/Scenario';
 import { MagicBolt } from './abilities/MagicBolt';
+import { Target } from './combat/Target';
 
 /**
  * Registers this demo's content with an engine: the entity kinds its spawn
@@ -24,6 +26,22 @@ export function registerGameContent(engine: Engine): void
 	// Dual-wield powers: a warm bolt for the right hand, a cool one for the left.
 	engine.abilities.register('fire-bolt', () => new MagicBolt('fire-bolt', 0xff6a2a));
 	engine.abilities.register('frost-bolt', () => new MagicBolt('frost-bolt', 0x4aa3ff));
+
+	// Destructible target block (opts: { position, size?, health? }).
+	engine.entities.register('target', (_ctx, opts: { position: THREE.Vector3; size?: number; health?: number }) =>
+		new Target(opts.position, opts.size, opts.health));
+
+	// Demo shooting-range: a floating arc of targets in front of the default spawn.
+	engine.events.on('world:loaded', () =>
+	{
+		const spots: Array<[number, number, number]> = [
+			[-4.5, 16.2, -11], [-2.2, 16.8, -12], [0, 17, -12.5], [2.2, 16.8, -12], [4.5, 16.2, -11]
+		];
+		for (const [x, y, z] of spots)
+		{
+			engine.add(engine.entities.create('target', engine, { position: new THREE.Vector3(x, y, z) }));
+		}
+	});
 
 	// glb authoring conventions specific to this game.
 	engine.sceneLoader.onUserData('data', 'path', ({ node, ctx }) =>

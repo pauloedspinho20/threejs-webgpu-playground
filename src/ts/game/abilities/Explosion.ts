@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { EngineContext } from '../../engine/EngineContext';
 import type { IUpdatable } from '../../engine/interfaces/IUpdatable';
+import { applyAreaDamage } from '../combat/Damageable';
 
 /**
  * A short-lived impact burst: an additive fireball that expands and fades, a
@@ -39,6 +40,9 @@ export class Explosion implements IUpdatable
 		this.light.position.copy(position);
 
 		ctx.graphicsWorld.add(this.core, this.ring, this.light);
+
+		// Splash damage: full at the centre, falling off across ~2x the blast radius.
+		applyAreaDamage(position, radius * 2, 120);
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
