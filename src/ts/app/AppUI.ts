@@ -3,6 +3,7 @@ import { ShadcnDialog } from "./ShadcnDialog";
 import { Stats } from "../../lib/utils/Stats";
 import { Engine } from "../index";
 import type { IControlRow, ScenarioInfo, WelcomeInfo } from "../index";
+import { cameraTuning } from "../game/config/cameraTuning";
 
 /**
  * App-side UI host. Owns all DOM chrome, the debug GUI, the FPS stats panel,
@@ -105,7 +106,18 @@ export class AppUI {
       this.setFPSVisible(enabled);
     });
 
-    console.log("params", params);
+    // Live camera / aim-pose tuning (read every frame by Character/Vehicle).
+    const camFolder = gui.addFolder("Camera Tuning");
+    camFolder.add(cameraTuning, "shoulderHeadHeight", 0, 1.5).name("Shoulder height");
+    camFolder.add(cameraTuning, "fpEyeRaise", -0.3, 0.6).name("FP eye raise");
+    camFolder.add(cameraTuning, "fpEyeForward", -0.3, 0.5).name("FP eye forward");
+    camFolder.add(cameraTuning, "armDownTilt", -0.5, 1.2).name("Arm down tilt");
+    camFolder.add(cameraTuning, "armSplay", 0, 0.8).name("Arm splay");
+    camFolder.add(cameraTuning, "forearmBend", -0.3, 0.8).name("Forearm bend");
+    camFolder.add(cameraTuning, "armRecoil", 0, 1.5).name("Arm recoil");
+    camFolder.add(cameraTuning, "vehicleFrontDistance", 1, 6).name("Veh front dist");
+    camFolder.add(cameraTuning, "vehicleFrontHeight", 0, 3).name("Veh front height");
+
     gui.open();
   }
 
@@ -139,6 +151,7 @@ export class AppUI {
         icon: "success",
         title: "Hello world!",
         text: "Empty world was succesfully initialized. Enjoy the blueness of the sky.",
+        onConfirm: () => this.engagePointerLock(),
       });
     });
 
@@ -171,6 +184,7 @@ export class AppUI {
       footer:
         '<a href="https://caniuse.com/webgpu" class="text-primary hover:underline" target="_blank">Click here for more information</a>',
       showConfirmButton: false,
+      onConfirm: () => this.engagePointerLock(),
     });
   }
 
@@ -181,6 +195,7 @@ export class AppUI {
       footer:
         '<a href="https://github.com/pauloedspinho20/threejs-webgpu-playground" class="text-primary hover:underline" target="_blank">GitHub page</a>',
       confirmButtonText: "Okay",
+      onConfirm: () => this.engagePointerLock(),
     });
   }
 
@@ -189,7 +204,18 @@ export class AppUI {
       title: welcome.title,
       html: welcome.content,
       confirmButtonText: "Play",
+      onConfirm: () => this.engagePointerLock(),
     });
+  }
+
+  /**
+   * Engage pointer lock on the canvas so the player can look around immediately
+   * after closing a dialog, without an extra click. Must be called from within
+   * the dialog's click gesture. No-op when pointer lock is disabled.
+   */
+  private engagePointerLock(): void {
+    if (!this.world.params.Pointer_Lock) return;
+    this.world.renderer.domElement.requestPointerLock?.();
   }
 
   // --- DOM helpers -------------------------------------------------------

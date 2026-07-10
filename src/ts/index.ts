@@ -51,6 +51,7 @@ export type { ICameraMode } from './engine/camera/ICameraMode';
 export { OrbitCameraMode } from './engine/camera/OrbitCameraMode';
 export { FollowCameraMode } from './engine/camera/FollowCameraMode';
 export { FirstPersonCameraMode } from './engine/camera/FirstPersonCameraMode';
+export { LockedCameraMode } from './engine/camera/LockedCameraMode';
 
 // World subsystems
 export { Sky } from './engine/world/Sky';

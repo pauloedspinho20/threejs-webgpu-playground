@@ -16,7 +16,6 @@ export class Projectile implements IUpdatable
 
 	private readonly ctx: EngineContext;
 	private readonly mesh: THREE.Mesh;
-	private readonly light: THREE.PointLight;
 	private readonly velocity: THREE.Vector3;
 	private readonly color: number;
 	private life: number;
@@ -42,9 +41,8 @@ export class Projectile implements IUpdatable
 		// Start slightly ahead of the eye so the bolt clears the caster's own body.
 		this.mesh.position.copy(origin).addScaledVector(dir, 0.7);
 
-		this.light = new THREE.PointLight(color, 6, 10);
-		this.mesh.add(this.light);
-
+		// No dynamic PointLight: adding/removing lights forces a WebGPU shader
+		// recompile (frame hitch on every cast). The emissive mesh is self-bright.
 		ctx.graphicsWorld.add(this.mesh);
 	}
 
