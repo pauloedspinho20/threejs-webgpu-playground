@@ -6,6 +6,9 @@ export interface DialogOptions {
   confirmButtonText?: string;
   showConfirmButton?: boolean;
   footer?: string;
+  /** Runs synchronously on the confirm/overlay click (within the user gesture,
+   *  so it can e.g. request pointer lock). */
+  onConfirm?: () => void;
 }
 
 const svgWarning = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-alert-triangle"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`;
@@ -78,14 +81,21 @@ export class ShadcnDialog {
         }, 200);
       };
 
+      // Fire onConfirm synchronously within the click gesture (so it can request
+      // pointer lock), then close.
+      const confirm = () => {
+        options.onConfirm?.();
+        closeDialog();
+      };
+
       if (showBtn) {
         const btn = dialog.querySelector("#dialog-confirm-btn");
-        btn?.addEventListener("click", closeDialog);
+        btn?.addEventListener("click", confirm);
       }
 
       // Close on overlay click if no button is required or it's just an info popup
       if (!showBtn) {
-        overlay.addEventListener("click", closeDialog);
+        overlay.addEventListener("click", confirm);
       }
 
       document.body.appendChild(overlay);

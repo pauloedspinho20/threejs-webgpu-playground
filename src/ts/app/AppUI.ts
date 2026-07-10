@@ -151,6 +151,7 @@ export class AppUI {
         icon: "success",
         title: "Hello world!",
         text: "Empty world was succesfully initialized. Enjoy the blueness of the sky.",
+        onConfirm: () => this.engagePointerLock(),
       });
     });
 
@@ -183,6 +184,7 @@ export class AppUI {
       footer:
         '<a href="https://caniuse.com/webgpu" class="text-primary hover:underline" target="_blank">Click here for more information</a>',
       showConfirmButton: false,
+      onConfirm: () => this.engagePointerLock(),
     });
   }
 
@@ -193,6 +195,7 @@ export class AppUI {
       footer:
         '<a href="https://github.com/pauloedspinho20/threejs-webgpu-playground" class="text-primary hover:underline" target="_blank">GitHub page</a>',
       confirmButtonText: "Okay",
+      onConfirm: () => this.engagePointerLock(),
     });
   }
 
@@ -201,7 +204,18 @@ export class AppUI {
       title: welcome.title,
       html: welcome.content,
       confirmButtonText: "Play",
+      onConfirm: () => this.engagePointerLock(),
     });
+  }
+
+  /**
+   * Engage pointer lock on the canvas so the player can look around immediately
+   * after closing a dialog, without an extra click. Must be called from within
+   * the dialog's click gesture. No-op when pointer lock is disabled.
+   */
+  private engagePointerLock(): void {
+    if (!this.world.params.Pointer_Lock) return;
+    this.world.renderer.domElement.requestPointerLock?.();
   }
 
   // --- DOM helpers -------------------------------------------------------
