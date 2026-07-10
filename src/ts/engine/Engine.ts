@@ -15,7 +15,7 @@ import {
   IControlRow,
   ScenarioInfo,
 } from "./EngineEvents";
-import { pass } from "three/tsl";
+import { pass, mix, vec4 } from "three/tsl";
 import { fxaa } from "three/addons/tsl/display/FXAANode.js";
 import WebGPU from "three/addons/capabilities/WebGPU.js";
 
@@ -48,6 +48,9 @@ export class Engine implements EngineContext {
   public renderer: THREE.WebGPURenderer;
   public camera: THREE.PerspectiveCamera;
   public postProcessing: THREE.PostProcessing;
+  private outputWithFXAA: THREE.PostProcessing["outputNode"];
+  private outputPlain: THREE.PostProcessing["outputNode"];
+  private lastFXAA: boolean = true;
   public graphicsWorld: THREE.Scene;
   public sky: Sky;
   public physicsWorld: CANNON.World;
@@ -144,10 +147,19 @@ export class Engine implements EngineContext {
       opts.camera.far,
     );
 
-    // Post-processing: FXAA as a TSL node pass
+    // Post-processing: the world pass, optionally FXAA'd, with the first-person
+    // viewmodel composited over it by its own alpha (hidden hands render
+    // transparent). Two prebuilt output nodes let the FXAA toggle swap cheaply.
     this.postProcessing = new THREE.PostProcessing(this.renderer);
-    const scenePass = pass(this.graphicsWorld, this.camera);
-    this.postProcessing.outputNode = fxaa(scenePass);
+    // TSL node graph handles are dynamically typed; `any` is idiomatic here.
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const scenePass: any = pass(this.graphicsWorld, this.camera);
+    const vmPass: any = pass(this.viewmodel.scene, this.viewmodel.camera);
+    const overlayViewmodel = (base: any): any => (vec4 as any)(mix(base.rgb, vmPass.rgb, vmPass.a), 1.0);
+    this.outputWithFXAA = overlayViewmodel(fxaa(scenePass));
+    this.outputPlain = overlayViewmodel(scenePass);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+    this.postProcessing.outputNode = this.outputWithFXAA;
 
     // Physics
     this.physicsWorld = new CANNON.World();
@@ -419,17 +431,14 @@ export class Engine implements EngineContext {
     // zero-size swapchain/depth-buffer errors; the loop recovers on resize.
     const canvas = this.renderer.domElement;
     if (canvas.width > 0 && canvas.height > 0) {
-      if (this.viewmodel.enabled) {
-        // The viewmodel needs a forward overlay pass, which the node-based
-        // PostProcessing output can't be composited with cleanly, so the
-        // first-person view renders directly (no FXAA) + the overlay on top.
-        this.renderer.render(this.graphicsWorld, this.camera);
-        this.viewmodel.render(this.renderer);
-      } else if (this.params.FXAA) {
-        this.postProcessing.render();
-      } else {
-        this.renderer.render(this.graphicsWorld, this.camera);
+      // Swap the output node only when the FXAA toggle changes (reassigning
+      // forces a node-graph recompile).
+      if (this.params.FXAA !== this.lastFXAA) {
+        this.postProcessing.outputNode = this.params.FXAA ? this.outputWithFXAA : this.outputPlain;
+        this.postProcessing.needsUpdate = true;
+        this.lastFXAA = this.params.FXAA;
       }
+      this.postProcessing.render();
     }
 
     // Measuring render time
