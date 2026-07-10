@@ -16,6 +16,8 @@ export class CameraOperator implements IInputReceiver, IUpdatable
 	public world: EngineContext;
 	public camera: THREE.Camera;
 	public target: THREE.Vector3;
+	/** Look-at point for LockedCameraMode (fully-driven fixed cameras). */
+	public lookTarget: THREE.Vector3 = new THREE.Vector3();
 	public sensitivity: THREE.Vector2;
 	public radius: number = 1;
 	public theta: number;

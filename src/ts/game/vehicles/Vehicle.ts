@@ -8,6 +8,8 @@ import { KeyBinding } from '../../engine/KeyBinding';
 import { VehicleSeat } from './VehicleSeat';
 import { Wheel } from './Wheel';
 import * as Utils from '../../engine/FunctionLibrary';
+import { OrbitCameraMode } from '../../engine/camera/OrbitCameraMode';
+import { LockedCameraMode } from '../../engine/camera/LockedCameraMode';
 import { CollisionGroups } from '../../engine/enums/CollisionGroups';
 import { SwitchingSeats } from '../characters/character_states/vehicles/SwitchingSeats';
 import { EntityType } from '../enums/EntityType';
@@ -32,7 +34,10 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 	public spawnPoint: THREE.Object3D;
 	private modelContainer: THREE.Group;
 
-	private firstPerson: boolean = false;
+	private vehicleView: 'chase' | 'interior' | 'front' = 'chase';
+	/** Front-mounted cam placement: distance ahead of the vehicle origin, and height. */
+	public frontCamDistance: number = 3.2;
+	public frontCamHeight: number = 1.1;
 
 	public physicsPreStep?(body: CANNON.Body, vehicle: Vehicle): void;
 
@@ -208,24 +213,45 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 		}
 	}
 
-	public setFirstPersonView(value: boolean): void
+	/**
+	 * Set the vehicle camera view:
+	 *  - 'chase': orbiting chase cam (mouse-controlled), the default.
+	 *  - 'interior': locked cockpit cam at the glb `camera` node, facing front.
+	 *  - 'front': locked cam mounted ahead of the vehicle, facing front.
+	 * The two locked cams ignore the mouse (see handleMouseMove / update).
+	 */
+	public setVehicleView(mode: 'chase' | 'interior' | 'front'): void
 	{
-		this.firstPerson = value;
-		if (this.controllingCharacter !== undefined) this.controllingCharacter.modelContainer.visible = !value;
+		this.vehicleView = mode;
 
-		if (value)
+		// Driver body is only hidden in the cockpit (interior) view.
+		if (this.controllingCharacter !== undefined)
 		{
-			this.world.cameraOperator.setRadius(0, true);
+			this.controllingCharacter.modelContainer.visible = mode !== 'interior';
+		}
+
+		if (mode === 'chase')
+		{
+			this.world.cameraOperator.setMode(new OrbitCameraMode());
+			this.world.cameraOperator.setRadius(3, true);
+			this.world.cameraOperator.setShoulder(0, true);
 		}
 		else
 		{
-			this.world.cameraOperator.setRadius(3, true);
+			this.world.cameraOperator.setMode(new LockedCameraMode());
 		}
 	}
 
+	public cycleVehicleView(): void
+	{
+		const order: Array<'chase' | 'interior' | 'front'> = ['chase', 'interior', 'front'];
+		this.setVehicleView(order[(order.indexOf(this.vehicleView) + 1) % order.length]);
+	}
+
+	/** Backwards-compatible: subclasses bind V to this; now cycles the 3 views. */
 	public toggleFirstPersonView(): void
 	{
-		this.setFirstPersonView(!this.firstPerson);
+		this.cycleVehicleView();
 	}
 	
 	public triggerAction(actionName: string, value: boolean): void
@@ -262,7 +288,8 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 
 	public handleMouseMove(event: MouseEvent, deltaX: number, deltaY: number): void
 	{
-		this.world.cameraOperator.move(deltaX, deltaY);
+		// Only the chase cam is mouse-orbitable; the locked cams face front.
+		if (this.vehicleView === 'chase') this.world.cameraOperator.move(deltaX, deltaY);
 	}
 
 	public handleMouseWheel(event: WheelEvent, value: number): void
@@ -273,33 +300,41 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 	public inputReceiverInit(): void
 	{
 		this.collision.allowSleep = false;
-		this.setFirstPersonView(false);
+		this.setVehicleView('chase');
 	}
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 	public inputReceiverUpdate(timeStep: number): void
 	{
-		if (this.firstPerson)
-		{
-			// this.world.cameraOperator.target.set(
-			//     this.position.x + this.camera.position.x,
-			//     this.position.y + this.camera.position.y,
-			//     this.position.z + this.camera.position.z
-			// );
+		const op = this.world.cameraOperator;
 
-			const temp = new THREE.Vector3().copy(this.camera.position);
-			temp.applyQuaternion(this.quaternion);
-			this.world.cameraOperator.target.copy(temp.add(this.position));
-		}
-		else
+		if (this.vehicleView === 'chase')
 		{
-			// Position camera
-			this.world.cameraOperator.target.set(
-				this.position.x,
-				this.position.y + 0.5,
-				this.position.z
-			);
+			// Orbit around the vehicle (mouse-controlled).
+			op.target.set(this.position.x, this.position.y + 0.5, this.position.z);
+			return;
 		}
+
+		// Locked cams: face the vehicle's front (+Z), with a slight downward tilt.
+		const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.quaternion);
+		const look = forward.clone();
+		look.y -= 0.18;
+
+		const anchor = new THREE.Vector3();
+		if (this.vehicleView === 'interior')
+		{
+			// The glb camera node, rotated into the vehicle frame; fallback above origin.
+			if (this.camera !== undefined) anchor.copy(this.camera.position).applyQuaternion(this.quaternion).add(this.position);
+			else anchor.set(this.position.x, this.position.y + 0.9, this.position.z);
+		}
+		else // front
+		{
+			anchor.copy(this.position).addScaledVector(forward, this.frontCamDistance);
+			anchor.y += this.frontCamHeight;
+		}
+
+		op.target.copy(anchor);
+		op.lookTarget.copy(anchor).add(look);
 	}
 
 	public setPosition(x: number, y: number, z: number): void
