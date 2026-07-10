@@ -584,9 +584,10 @@ export class Character extends THREE.Object3D implements IWorldEntity
 
 		const op = this.world.cameraOperator;
 
-		// View direction: first-person looks along the operator yaw/pitch
-		// (camera->character is degenerate at radius 0); others look toward the char.
-		if (this.firstPerson)
+		// View direction: the aim views (over-shoulder + first-person) look along
+		// the operator yaw/pitch so the body + movement track the cursor; plain
+		// third-person looks from the camera toward the character.
+		if (this.viewMode !== 'third')
 		{
 			op.getForward(this.viewVector);
 		}
@@ -622,6 +623,10 @@ export class Character extends THREE.Object3D implements IWorldEntity
 			if (this.firstPerson) op.target.y += this.firstPersonEyeHeight;
 		}
 
+		// In the aim views keep the whole body yawed to the look every frame
+		// (the idle states don't call this, so the body would otherwise only turn
+		// while moving).
+		if (this.viewMode !== 'third') this.setCameraRelativeOrientationTarget();
 	}
 
 	public setAnimation(clipName: string, fadeIn: number): number
@@ -693,21 +698,33 @@ export class Character extends THREE.Object3D implements IWorldEntity
 
 	public setCameraRelativeOrientationTarget(): void
 	{
-		if (this.vehicleEntryInstance === null)
-		{
-			// The body turns to face the camera-relative input and walks forward
-			// along it. In first-person the body is hidden and aim comes from the
-			// look vector, so this same logic gives correct W/A/S/D movement.
-			const moveVector = this.getCameraRelativeMovementVector();
+		if (this.vehicleEntryInstance !== null) return;
 
-			if (moveVector.x === 0 && moveVector.y === 0 && moveVector.z === 0)
+		// Aim views (over-shoulder + first-person): the whole body faces where the
+		// camera looks (flattened yaw), turning with the cursor even when standing
+		// still. Movement is look-relative (W forward, A/D strafe).
+		if (this.viewMode !== 'third')
+		{
+			const flatLook = new THREE.Vector3(this.viewVector.x, 0, this.viewVector.z);
+			if (flatLook.lengthSq() > 0)
 			{
-				this.setOrientation(this.orientation);
+				flatLook.normalize();
+				this.setOrientation(flatLook);
 			}
-			else
-			{
-				this.setOrientation(moveVector);
-			}
+			return;
+		}
+
+		// Third-person: the body turns to face the camera-relative input and
+		// walks forward along it (classic movement-facing).
+		const moveVector = this.getCameraRelativeMovementVector();
+
+		if (moveVector.x === 0 && moveVector.y === 0 && moveVector.z === 0)
+		{
+			this.setOrientation(this.orientation);
+		}
+		else
+		{
+			this.setOrientation(moveVector);
 		}
 	}
 
