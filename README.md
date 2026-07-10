@@ -1,22 +1,14 @@
 <p align="center">
-	<a href="https://jblaha.art/sketchbook/latest"><img src="./src/img/thumbnail.png"></a>
-	<br>
-	<a href="https://jblaha.art/sketchbook/latest">Live demo</a>
-	<br>
+	<img src="./src/img/thumbnail.png">
 </p>
 
-# Final update (20. Feb 2023)
+# 🎮 threejs-webgpu-playground
 
-As I have no more interest in developing this project, it comes to a conclusion. In order to remain honest about the true state of the project, I am archiving this repository.
+A web-based **game-engine template** built on [three.js](https://github.com/mrdoob/three.js) **WebGPU** (with shaders written in [TSL](https://github.com/mrdoob/three.js/wiki/Three.js-Shading-Language)) and [cannon-es](https://github.com/pmndrs/cannon-es). It provides third-person character controls, drivable vehicles, physics, cascaded shadow maps, a procedural sky, and a Blender-authored world pipeline — a starting point for building interactive 3D spaces.
 
-- If you wish to modify Sketchbook feel free to fork it.
-- To see if someone is currently maintaining a fork, check out the [Network Graph](https://github.com/swift502/Sketchbook/network).
+It runs on the WebGPU backend where available and falls back to WebGL2 automatically. See [ROADMAP.md](ROADMAP.md) for where the project is headed.
 
-# 📒 Sketchbook
-
-Simple web based game engine built on [three.js](https://github.com/mrdoob/three.js) and [cannon.js](https://github.com/schteppe/cannon.js) focused on third-person character controls and related gameplay mechanics.
-
-Mostly a playground for exploring how conventional third person gameplay mechanics found in modern games work and recreating them in a general way.
+> Forked from and originally created as [Sketchbook](https://github.com/swift502/Sketchbook) by Jan Bláha (swift502). This fork migrates the engine from WebGL to three.js WebGPU + TSL, updates the toolchain to Vite + TypeScript, and swaps in cannon-es.
 
 ## Features
 
@@ -38,56 +30,61 @@ Mostly a playground for exploring how conventional third person gameplay mechani
 
 All planned features can be found in the [GitHub Projects](https://github.com/swift502/Sketchbook/projects).
 
+> **This fork** has been migrated from WebGL to **three.js WebGPU (`WebGPURenderer`)** with shaders rewritten in **TSL** (Three.js Shading Language). It runs on the WebGPU backend where available and automatically falls back to WebGL2 otherwise. The toolchain is **Vite + TypeScript**, physics uses **cannon-es**, and three.js is on r185+.
+
+## Architecture
+
+The source is split into three layers with a one-directional dependency rule
+(`app` → `game` → `engine`); the engine ships **no** game content and has zero
+runtime dependency on it. See [docs/architecture.md](docs/architecture.md).
+
+- **`src/ts/engine/`** — the generic framework: renderer, physics, camera,
+  input, loading, sky/ocean, and the plugin registries.
+- **`src/ts/game/`** — this demo's content: characters, vehicles, scenarios,
+  paths, spawn points.
+- **`src/ts/app/`** — the host: canvas mount, debug GUI, dialogs, HUD.
+
 ## Usage
 
-You can define your own scenes in Blender, and then read them with Sketchbook. Sketchbook needs to run on a local server such as [http-server](https://www.npmjs.com/package/http-server) or [webpack-dev-server](https://github.com/webpack/webpack-dev-server) to be able to load external assets.
+Construct an engine, register your content, and point it at a Blender-authored
+`.glb`. The demo is bootstrapped in [`src/ts/app/main.ts`](src/ts/app/main.ts):
 
-<!-- #### Script tag -->
+```ts
+import { createEngine } from 'threejs-webgpu-playground';
+import { registerGameContent } from './game/register';
 
-1. Import:
-
-```html
-<script src="sketchbook.min.js"></script>
+const engine = createEngine({ world: '/assets/world.glb', assetBaseUrl: '/assets/' });
+registerGameContent(engine); // entity kinds + glb conventions — before load
 ```
 
-2. Load a glb scene defined in Blender:
+Add your own entity types and glb conventions through the public registries —
+no engine edits needed:
 
-```javascript
-const world = new Sketchbook.World('scene.glb');
+```ts
+engine.entities.register('drone', (ctx, { model }) => new Drone(model));
+engine.sceneLoader.onUserData('data', 'light', ({ node, ctx }) => { /* … */ });
 ```
 
-<!--
+`createEngine(options)` is fully configurable (container, camera, renderer,
+physics, post-FX, world bounds, …); every field has a sensible default. React
+to lifecycle via the typed event bus (`engine.events.on('world:loaded', …)`).
 
-#### NPM
+- **World authoring** (the Blender `userData` contract): [docs/authoring.md](docs/authoring.md)
+- **Architecture & extension points**: [docs/architecture.md](docs/architecture.md)
 
-1. Install:
+## Running locally
 
-```
-npm i sketchbook
-```
-
-2. Import:
-
-```javascript
-import { World } from 'sketchbook';
-```
-
-3. Load a glb scene defined in Blender:
-
-```javascript
-const world = new World('scene.glb');
-```
-
--->
+1. Install a current [Node.js](https://nodejs.org/en/) LTS (18+)
+2. Run `npm install`
+3. Run `npm run dev` and open http://localhost:8080
+4. Build for production with `npm run build` (output in `dist/`); preview it with `npm run preview`
 
 ## Contributing
 
-1. Get the LTS version of [Node.js](https://nodejs.org/en/) 16
-2. [Fork this repository](https://help.github.com/en/github/getting-started-with-github/fork-a-repo)
-3. Run `npm install`
-4. Run `npm run dev`
-5. Make changes and test them out at http://localhost:8080
-6. Commit and [make a pull request](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request-from-a-fork)!
+1. [Fork this repository](https://help.github.com/en/github/getting-started-with-github/fork-a-repo)
+2. Run `npm install`, then `npm run dev`
+3. Make changes and test them out at http://localhost:8080
+4. Commit and [make a pull request](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request-from-a-fork)!
 
 ## Credits
 
