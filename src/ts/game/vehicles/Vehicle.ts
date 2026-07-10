@@ -10,6 +10,7 @@ import { Wheel } from './Wheel';
 import * as Utils from '../../engine/FunctionLibrary';
 import { OrbitCameraMode } from '../../engine/camera/OrbitCameraMode';
 import { LockedCameraMode } from '../../engine/camera/LockedCameraMode';
+import { cameraTuning } from '../config/cameraTuning';
 import { CollisionGroups } from '../../engine/enums/CollisionGroups';
 import { SwitchingSeats } from '../characters/character_states/vehicles/SwitchingSeats';
 import { EntityType } from '../enums/EntityType';
@@ -35,9 +36,6 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 	private modelContainer: THREE.Group;
 
 	private vehicleView: 'chase' | 'interior' | 'front' = 'chase';
-	/** Front-mounted cam placement: distance ahead of the vehicle origin, and height. */
-	public frontCamDistance: number = 3.2;
-	public frontCamHeight: number = 1.1;
 
 	public physicsPreStep?(body: CANNON.Body, vehicle: Vehicle): void;
 
@@ -329,8 +327,8 @@ export abstract class Vehicle extends THREE.Object3D implements IWorldEntity
 		}
 		else // front
 		{
-			anchor.copy(this.position).addScaledVector(forward, this.frontCamDistance);
-			anchor.y += this.frontCamHeight;
+			anchor.copy(this.position).addScaledVector(forward, cameraTuning.vehicleFrontDistance);
+			anchor.y += cameraTuning.vehicleFrontHeight;
 		}
 
 		op.target.copy(anchor);

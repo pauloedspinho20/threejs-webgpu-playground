@@ -7,6 +7,7 @@ import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { KeyBinding } from '../../engine/KeyBinding';
 import { OrbitCameraMode } from '../../engine/camera/OrbitCameraMode';
 import { FirstPersonCameraMode } from '../../engine/camera/FirstPersonCameraMode';
+import { cameraTuning } from '../config/cameraTuning';
 import type { Ability } from '../../engine/abilities/Ability';
 import { VectorSpringSimulator } from '../../engine/physics/spring_simulation/VectorSpringSimulator';
 import { RelativeSpringSimulator } from '../../engine/physics/spring_simulation/RelativeSpringSimulator';
@@ -53,9 +54,8 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	private rightRecoil: number = 0;
 	private leftRecoil: number = 0;
 
-	// First-person arm aim pose (bone length axis is local +Y). Right side uses
-	// these directly; left mirrors the Y/Z signs. Public so it can be tuned live.
-	public armAim = { upperX: -0.15, upperY: 0, upperZ: 0.28, lowerX: -0.35, lowerY: 0, lowerZ: 0.12, recoil: 0.6 };
+	// Aim pose + camera offsets live in the shared `cameraTuning` config (read
+	// every frame, bound to the debug GUI for live tuning).
 	private static readonly RECOIL_TIME = 0.15;
 
 	// Movement
@@ -80,13 +80,8 @@ export class Character extends THREE.Object3D implements IWorldEntity
 
 	/** Active on-foot camera view. Cycled with V. */
 	public viewMode: 'third' | 'shoulder' | 'first' = 'third';
-	/** Eye height above the character's origin (physics capsule centre), world units. Fallback when there's no head bone. */
+	/** Eye height above the character origin, used only as a no-head-bone fallback. */
 	public firstPersonEyeHeight: number = 0.6;
-	/** Over-shoulder: offset added to the head bone world position (high orbit centre). */
-	public headCameraOffset: THREE.Vector3 = new THREE.Vector3(0, 0.55, 0);
-	/** First-person: raise above the head bone to eye level, and nudge forward to the face. */
-	public firstPersonEyeRaise: number = 0.05;
-	public firstPersonEyeForward: number = 0;
 
 	/** True while in the first-person view (camera at the eye, body hidden). */
 	public get firstPerson(): boolean { return this.viewMode === 'first'; }
@@ -604,13 +599,13 @@ export class Character extends THREE.Object3D implements IWorldEntity
 			{
 				// Sit at the eyes and nudge to the front of the head so the raised
 				// arms read as first-person hands and the head geometry doesn't clip.
-				op.target.y += this.firstPersonEyeRaise;
-				op.target.addScaledVector(this.viewVector, this.firstPersonEyeForward);
+				op.target.y += cameraTuning.fpEyeRaise;
+				op.target.addScaledVector(this.viewVector, cameraTuning.fpEyeForward);
 			}
 			else
 			{
 				// Over-shoulder: high orbit centre for a raised, looking-down framing.
-				op.target.add(this.headCameraOffset);
+				op.target.y += cameraTuning.shoulderHeadHeight;
 			}
 		}
 		else
@@ -787,11 +782,11 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	private setArmAim(upper: THREE.Object3D | undefined, lower: THREE.Object3D | undefined, side: number, recoil: number): void
 	{
 		if (upper === undefined || lower === undefined) return;
-		const a = this.armAim;
+		const a = cameraTuning;
 		// Recoil pulls the upper arm back briefly after a cast.
-		const kick = (recoil / Character.RECOIL_TIME) * a.recoil;
-		upper.rotation.set(a.upperX + kick, a.upperY * side, a.upperZ * side);
-		lower.rotation.set(a.lowerX, a.lowerY * side, a.lowerZ * side);
+		const kick = (recoil / Character.RECOIL_TIME) * a.armRecoil;
+		upper.rotation.set(a.armUpperX + kick, 0, a.armUpperZ * side);
+		lower.rotation.set(a.armLowerX, 0, a.armLowerZ * side);
 	}
 
 	/** Equip an ability (by registered id) into the given hand; orb rides the hand bone. */

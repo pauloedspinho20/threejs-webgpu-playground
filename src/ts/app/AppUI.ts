@@ -3,6 +3,7 @@ import { ShadcnDialog } from "./ShadcnDialog";
 import { Stats } from "../../lib/utils/Stats";
 import { Engine } from "../index";
 import type { IControlRow, ScenarioInfo, WelcomeInfo } from "../index";
+import { cameraTuning } from "../game/config/cameraTuning";
 
 /**
  * App-side UI host. Owns all DOM chrome, the debug GUI, the FPS stats panel,
@@ -105,7 +106,19 @@ export class AppUI {
       this.setFPSVisible(enabled);
     });
 
-    console.log("params", params);
+    // Live camera / aim-pose tuning (read every frame by Character/Vehicle).
+    const camFolder = gui.addFolder("Camera Tuning");
+    camFolder.add(cameraTuning, "shoulderHeadHeight", 0, 1.5).name("Shoulder height");
+    camFolder.add(cameraTuning, "fpEyeRaise", -0.3, 0.6).name("FP eye raise");
+    camFolder.add(cameraTuning, "fpEyeForward", -0.3, 0.5).name("FP eye forward");
+    camFolder.add(cameraTuning, "armUpperX", -1.5, 1.5).name("Arm upper X");
+    camFolder.add(cameraTuning, "armUpperZ", -1, 1).name("Arm upper Z");
+    camFolder.add(cameraTuning, "armLowerX", -1.5, 0.5).name("Arm lower X");
+    camFolder.add(cameraTuning, "armLowerZ", -0.5, 1).name("Arm lower Z");
+    camFolder.add(cameraTuning, "armRecoil", 0, 1.5).name("Arm recoil");
+    camFolder.add(cameraTuning, "vehicleFrontDistance", 1, 6).name("Veh front dist");
+    camFolder.add(cameraTuning, "vehicleFrontHeight", 0, 3).name("Veh front height");
+
     gui.open();
   }
 
