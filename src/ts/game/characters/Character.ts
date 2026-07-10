@@ -620,15 +620,9 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	{
 		if (this.vehicleEntryInstance === null)
 		{
-			// First-person: the body always faces where the camera looks (flat
-			// yaw), so movement is relative to the look direction like an FPS.
-			if (this.firstPerson)
-			{
-				const flatLook = new THREE.Vector3(this.viewVector.x, 0, this.viewVector.z).normalize();
-				if (flatLook.lengthSq() > 0) this.setOrientation(flatLook);
-				return;
-			}
-
+			// The body turns to face the camera-relative input and walks forward
+			// along it. In first-person the body is hidden and aim comes from the
+			// look vector, so this same logic gives correct W/A/S/D movement.
 			const moveVector = this.getCameraRelativeMovementVector();
 
 			if (moveVector.x === 0 && moveVector.y === 0 && moveVector.z === 0)
@@ -645,7 +639,14 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	/** Toggle between first-person and third-person views (on-foot only). */
 	public toggleFirstPerson(): void
 	{
-		this.firstPerson = !this.firstPerson;
+		this.setFirstPerson(!this.firstPerson);
+	}
+
+	/** Switch to first- or third-person (no-op if already in that view). */
+	public setFirstPerson(enabled: boolean): void
+	{
+		if (this.firstPerson === enabled) return;
+		this.firstPerson = enabled;
 		this.applyViewMode();
 	}
 
@@ -704,6 +705,9 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	/** Cast the ability held in the given hand, if equipped and off cooldown. */
 	private castHand(hand: 'left' | 'right'): void
 	{
+		// Abilities are only wielded in the first-person view.
+		if (!this.firstPerson) return;
+
 		const ability = hand === 'right' ? this.rightHandAbility : this.leftHandAbility;
 		const cooldown = hand === 'right' ? this.rightCooldown : this.leftCooldown;
 		if (ability === undefined || cooldown > 0) return;
@@ -801,6 +805,10 @@ export class Character extends THREE.Object3D implements IWorldEntity
 
 				if (entryPointFinder.closestObject !== undefined)
 				{
+					// Drop back to third person so the walk-to-door / entry
+					// animation is visible before it begins.
+					this.setFirstPerson(false);
+
 					vehicleEntryInstance.entryPoint = entryPointFinder.closestObject;
 					this.triggerAction('up', true);
 					this.vehicleEntryInstance = vehicleEntryInstance;
