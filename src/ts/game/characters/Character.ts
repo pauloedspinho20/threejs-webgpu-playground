@@ -67,8 +67,10 @@ export class Character extends THREE.Object3D implements IWorldEntity
 
 	/** Active on-foot camera view. Cycled with V. */
 	public viewMode: 'third' | 'shoulder' | 'first' = 'third';
-	/** Eye height above the character's origin (physics capsule centre), world units. */
+	/** Eye height above the character's origin (physics capsule centre), world units. Fallback when there's no head bone. */
 	public firstPersonEyeHeight: number = 0.6;
+	/** Offset added to the head bone's world position for the aim camera / eye (raised above the head so the view sits high). */
+	public headCameraOffset: THREE.Vector3 = new THREE.Vector3(0, 0.55, 0);
 	private viewmodelHandsBuilt: boolean = false;
 
 	/** True while in the first-person view (camera at the eye, body hidden). */
@@ -548,20 +550,36 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		if (this.controlledObject !== undefined)
 		{
 			this.controlledObject.inputReceiverUpdate(timeStep);
+			return;
 		}
-		else if (this.firstPerson)
+
+		const op = this.world.cameraOperator;
+
+		// View direction: first-person looks along the operator yaw/pitch
+		// (camera->character is degenerate at radius 0); others look toward the char.
+		if (this.firstPerson)
 		{
-			// Camera sits at the eye; the look direction comes from the operator's
-			// yaw/pitch (not from camera->character, which is degenerate here).
-			this.world.cameraOperator.getForward(this.viewVector);
-			this.getWorldPosition(this.world.cameraOperator.target);
-			this.world.cameraOperator.target.y += this.firstPersonEyeHeight;
+			op.getForward(this.viewVector);
 		}
 		else
 		{
-			// Look in camera's direction
 			this.viewVector = new THREE.Vector3().subVectors(this.position, this.world.camera.position);
-			this.getWorldPosition(this.world.cameraOperator.target);
+		}
+
+		// Camera anchor. The aim views (over-shoulder + first-person) mount on the
+		// head bone, so the view sits at head height and shakes naturally with the
+		// animation; third-person orbits the body origin. Force the head's world
+		// matrix current (the mixer runs in update()) before reading it.
+		if (this.viewMode !== 'third' && this.headBone !== undefined)
+		{
+			this.headBone.updateWorldMatrix(true, false);
+			this.headBone.getWorldPosition(op.target);
+			op.target.add(this.headCameraOffset);
+		}
+		else
+		{
+			this.getWorldPosition(op.target);
+			if (this.firstPerson) op.target.y += this.firstPersonEyeHeight;
 		}
 
 	}
