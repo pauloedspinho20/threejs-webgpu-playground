@@ -37,6 +37,8 @@ export type EngineEvents = {
 	'world:empty': void;
 	'scenario:launched': { id: string; welcome?: WelcomeInfo };
 	'controls:changed': IControlRow[];
+	/** The controlled entity entered/left an aiming view (app shows a reticle). */
+	'aim:changed': { aiming: boolean };
 };
 
 export type Listener<T> = (payload: T) => void;

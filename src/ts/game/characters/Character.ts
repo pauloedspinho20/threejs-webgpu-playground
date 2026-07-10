@@ -310,6 +310,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 				this.resetControls();
 				this.modelContainer.visible = true; // reveal the body while flying
 				this.world.viewmodel.enabled = false; // no hands in free camera
+				this.world.events.emit('aim:changed', { aiming: false });
 				this.world.cameraOperator.characterCaller = this;
 				this.world.inputManager.setInputReceiver(this.world.cameraOperator);
 			}
@@ -489,6 +490,7 @@ export class Character extends THREE.Object3D implements IWorldEntity
 		{
 			this.world.viewmodel.enabled = false; // no hands while controlling a vehicle
 			this.world.cameraOperator.setShoulder(0, true); // no shoulder pan in a vehicle
+			this.world.events.emit('aim:changed', { aiming: false });
 			this.controlledObject.inputReceiverInit();
 			return;
 		}
@@ -680,6 +682,9 @@ export class Character extends THREE.Object3D implements IWorldEntity
 	private applyViewMode(): void
 	{
 		const op = this.world.cameraOperator;
+
+		// Reticle shows in the aim views (over-shoulder + first-person).
+		this.world.events.emit('aim:changed', { aiming: this.viewMode !== 'third' });
 
 		if (this.viewMode === 'first')
 		{

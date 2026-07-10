@@ -46,12 +46,17 @@ abstraction is the missing primitive. Build in independently-shippable layers:
 - [x] **A4 · Ability / equip system (dual-wield powers).** `Ability` + `AbilityRegistry`; RMB → right hand, LMB → left hand, per-hand cooldowns, viewmodel orb per hand. `MagicBolt` fires a `Projectile` that raycasts the physics world and detonates an `Explosion` on impact (knockback on dynamic bodies). Casting is first-person only. Spell VFX → TSL compute particles is the natural upgrade (Milestone 4).
 - [x] **A5 · Over-the-shoulder / aim mode + transitions.** `V` cycles third → over-shoulder → first. Over-shoulder = orbit at a shorter radius + a lerped lateral shoulder pan; third ↔ shoulder transitions glide (radius + shoulder lerp).
 
-*Milestone complete.* Follow-ups worth doing: a true aim-lock in over-shoulder (camera fixed behind, mouse aims), spine/neck bones for visible first-person aim, and the FXAA-with-viewmodel node composite.
+*Milestone complete.* Follow-ups landed since:
+- [x] **FXAA-with-viewmodel node composite** — the viewmodel is a post-processing pass blended over the FXAA'd scene, so first-person keeps anti-aliasing.
+- [x] **Head aim bone** — the `head` bone pitches toward the camera aim so the body visibly looks up/down in third/over-shoulder.
+- [x] **Aim reticle** — a centred crosshair shown in the aim views (over-shoulder + first-person) via an `aim:changed` event.
+- [ ] **True aim-lock in over-shoulder** (camera fixed behind, mouse aims the body) — skipped for now: without strafe animations the visible body foot-slides, and casting is first-person only, so the payoff is low.
+- [ ] **Spine bend for larger aim angles** (head-only today).
 
 **Supporting work this milestone needs (elevated from later milestones):**
 
-- [ ] **Input action-map + rebinding + gamepad.** `KeyBinding` is hardcoded per input receiver; an action-map layer is a prerequisite for a controls menu, gamepad support, and clean per-mode bindings.
-- [ ] **Combat / interaction core.** Health + damage, hit detection (raycast / physics query), and interactables (pickups, doors, levers) — the scaffolding abilities and weapons act on.
+- [x] **Gamepad support.** `InputManager` polls the first pad and synthesizes the existing action events (sticks → move/look, buttons → jump/enter/view/cast). *(Still open: rebindable key/pad mappings + a controls menu — `KeyBinding` is still hardcoded per receiver.)*
+- [x] **Combat / interaction core (started).** `IDamageable` + area damage; destructible `Target` blocks that explosions damage and destroy (with chain reactions). *(Still open: player health, interactables like pickups/doors/levers.)*
 - [ ] **TSL compute particles** (also in Milestone 4) — spell and impact VFX, and the actual payoff of the WebGPU migration.
 
 > ✅ **Fixed along the way:** cascaded sun shadows were capped at 250u (`maxFar`) while the camera sees to ~1010u, so shadows faded out mid-view. Now 800u / 4 cascades by default and configurable via `renderer.shadowDistance` / `renderer.shadowCascades`.

@@ -19,8 +19,36 @@ export class AppUI {
     this.world = world;
 
     this.setupStats();
+    this.setupCrosshair();
     this.setupGUI();
     this.bindEvents();
+  }
+
+  private crosshair!: HTMLElement;
+
+  private setupCrosshair(): void {
+    const el = document.createElement("div");
+    el.id = "crosshair";
+    el.style.cssText = [
+      "position:fixed",
+      "left:50%",
+      "top:50%",
+      "width:6px",
+      "height:6px",
+      "margin:-3px 0 0 -3px",
+      "border:1px solid rgba(255,255,255,0.9)",
+      "border-radius:50%",
+      "box-shadow:0 0 2px rgba(0,0,0,0.8)",
+      "pointer-events:none",
+      "z-index:20",
+      "display:none",
+    ].join(";");
+    document.body.appendChild(el);
+    this.crosshair = el;
+  }
+
+  private setCrosshairVisible(visible: boolean): void {
+    this.crosshair.style.display = visible ? "block" : "none";
   }
 
   private setupStats(): void {
@@ -97,6 +125,7 @@ export class AppUI {
       this.setUIVisible(true);
     });
     w.events.on("controls:changed", (rows) => this.renderControls(rows));
+    w.events.on("aim:changed", ({ aiming }) => this.setCrosshairVisible(aiming));
 
     w.events.on("world:loaded", ({ scenarios }) => {
       this.buildScenarioMenu(scenarios);
